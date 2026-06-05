@@ -4,6 +4,8 @@
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { inscription as apiInscription, connexion as apiConnexion } from './services/api';
 import {
   View,
   Text,
@@ -44,6 +46,8 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
   const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
   const [telephone, setTelephone] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [chargement, setChargement] = useState(false);
+const [erreur, setErreur] = useState('');
 
   return (
     <SafeAreaView style={[styles.pinContainer, { backgroundColor: bg }]}>
@@ -77,8 +81,30 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
   onChangeText={setMotDePasse}
 />
       </View>
-      <TouchableOpacity style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} onPress={onConnexion} activeOpacity={0.8}>
-        <Text style={styles.payerBoutonTexte}>Se connecter</Text>
+     <TouchableOpacity 
+  style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} 
+  onPress={async () => {
+    setChargement(true);
+    setErreur('');
+    const result = await apiConnexion(telephone, motDePasse);
+    setChargement(false);
+    if (result.succes) {
+        await AsyncStorage.setItem('token', result.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
+        onConnexion();
+    } else {
+        setErreur(result.erreur);
+    }
+  }}
+  activeOpacity={0.8}
+>{erreur ? (
+  <Text style={{ color: COLORS.negative, fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
+    {erreur}
+  </Text>
+) : null}
+       <Text style={styles.payerBoutonTexte}>
+  {chargement ? 'Connexion...' : 'Se connecter'}
+</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onInscription} style={{ marginTop: 20 }}>
         <Text style={{ color: COLORS.primary, fontSize: 14 }}>
