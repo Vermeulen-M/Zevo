@@ -8,7 +8,7 @@ import axios from 'axios';
 // URL de base du serveur backend
 // En développement = ton PC local
 // En production = ton serveur cloud
-const BASE_URL = 'http://10.0.2.2:3000';
+const BASE_URL = 'http://10.207.48.218:3000';
 // Note : 10.0.2.2 = adresse spéciale qui pointe vers
 // ton PC depuis l'émulateur Android (localhost ne fonctionne pas)
 

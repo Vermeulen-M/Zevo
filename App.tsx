@@ -44,9 +44,9 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
   const text = isDark ? COLORS.darkText : COLORS.lightText;
   const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
   const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
-  const [telephone, setTelephone] = useState('');
-  const [motDePasse, setMotDePasse] = useState('');
-  const [chargement, setChargement] = useState(false);
+const [telephone, setTelephone] = useState('');
+const [motDePasse, setMotDePasse] = useState('');
+const [chargement, setChargement] = useState(false);
 const [erreur, setErreur] = useState('');
 
   return (
@@ -126,8 +126,11 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
   const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
   const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
   const [nom, setNom] = useState('');
+  const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState('');
 
   return (
     <SafeAreaView style={[styles.pinContainer, { backgroundColor: bg }]}>
@@ -170,8 +173,32 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
           onChangeText={setMotDePasse}
         />
       </View>
-      <TouchableOpacity style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} onPress={onInscription} activeOpacity={0.8}>
-        <Text style={styles.payerBoutonTexte}>Créer mon compte</Text>
+      <TouchableOpacity 
+  style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} 
+  onPress={async () => {
+    setChargement(true);
+    setErreur('');
+    const result = await apiInscription(nom, email, telephone, motDePasse);
+    setChargement(false);
+    if (result.succes) {
+        await AsyncStorage.setItem('token', result.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
+        onInscription();
+    } else {
+        setErreur(result.erreur);
+    }
+  }}
+ activeOpacity={0.8}
+>
+    {erreur ? (
+  <Text style={{ color: COLORS.negative, fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
+    {erreur}
+  </Text>
+) : null}
+
+  <Text style={styles.payerBoutonTexte}>
+  {chargement ? 'Création...' : 'Créer mon compte'}
+</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onConnexion} style={{ marginTop: 20 }}>
         <Text style={{ color: COLORS.primary, fontSize: 14 }}>
@@ -637,7 +664,7 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 // ============================================
 // ÉCRAN PROFIL
 // ============================================
-function EcranProfil({ isDark }: { isDark: boolean }) {
+function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
   const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
   const text = isDark ? COLORS.darkText : COLORS.lightText;
   const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
@@ -670,12 +697,17 @@ function EcranProfil({ isDark }: { isDark: boolean }) {
           'Aide & Support',
           'Se déconnecter',
         ].map((option) => (
-          <TouchableOpacity key={option} style={[styles.profilOption, { borderBottomColor: border, backgroundColor: bgSecondary }]} activeOpacity={0.7}>
-            <Text style={[styles.profilOptionTexte, { color: option === 'Se déconnecter' ? COLORS.negative : text }]}>
-              {option}
-            </Text>
-            <Text style={{ color: textSecondary }}>›</Text>
-          </TouchableOpacity>
+       <TouchableOpacity 
+  key={option} 
+  style={[styles.profilOption, { borderBottomColor: border, backgroundColor: bgSecondary }]} 
+  activeOpacity={0.7}
+  onPress={option === 'Se déconnecter' ? onDeconnexion : undefined}
+>
+  <Text style={[styles.profilOptionTexte, { color: option === 'Se déconnecter' ? COLORS.negative : text }]}>
+    {option}
+  </Text>
+  <Text style={{ color: textSecondary }}>›</Text>
+</TouchableOpacity>
         ))}
       </View>
     </ScrollView>
@@ -721,8 +753,29 @@ export default function App() {
   const [ecranActif, setEcranActif] = useState('accueil');
   const [succesVisible, setSuccesVisible] = useState(false);
   const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | null>('connexion');
+  const [chargementInitial, setChargementInitial] = useState(true);
   const isDark = useColorScheme() === 'dark';
   const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
+  // Vérifier si l'utilisateur est déjà connecté au démarrage
+useEffect(() => {
+    async function verifierToken() {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+            setEcranAuth(null); // déjà connecté → skip connexion
+        }
+        setChargementInitial(false);
+    }
+    verifierToken();
+}, []);
+
+// Afficher un écran vide pendant le chargement initial
+if (chargementInitial) {
+    return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.lightBg, alignItems: 'center', justifyContent: 'center' }}>
+            <LogoZevo taille={48} />
+        </SafeAreaView>
+    );
+}
 
   function afficherSucces() { setSuccesVisible(true); }
 
@@ -756,7 +809,11 @@ if (!pinValide) {
       {ecranActif === 'transferts' && <EcranTransferts isDark={isDark} onTransaction={afficherSucces} />}
       {ecranActif === 'payer'      && <EcranPayer      isDark={isDark} onTransaction={afficherSucces} />}
       {ecranActif === 'wallets'    && <EcranWallets    isDark={isDark} />}
-      {ecranActif === 'profil'     && <EcranProfil     isDark={isDark} />}
+ {ecranActif === 'profil' && <EcranProfil isDark={isDark} onDeconnexion={async () => {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
+    setEcranAuth('connexion');
+}} />}
 
       <BarreNavigation ecranActif={ecranActif} onChanger={setEcranActif} isDark={isDark} />
 
