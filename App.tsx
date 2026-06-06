@@ -1,116 +1,378 @@
 // ============================================
-// ZEVO — App.tsx v4
-// Payer avec 2 onglets + structure finale
+// ZEVO — App.tsx v6
+// Design Premium — Neumorphisme + Son
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion } from './services/api';
 import {
-  View,
-  Text,
-  StyleSheet,
-  StatusBar,
-  TouchableOpacity,
-  ScrollView,
-  useColorScheme,
-  SafeAreaView,
-  Animated,
-  TextInput,
+  View, Text, StyleSheet, StatusBar, TouchableOpacity,
+  ScrollView, useColorScheme, SafeAreaView, Animated,
+  TextInput, Dimensions, Platform,
 } from 'react-native';
 
-const COLORS = {
-  primary: '#0A84FF',
-  lightBg: '#FFFFFF',
-  lightBgSecondary: '#F2F2F7',
-  lightText: '#111111',
-  lightTextSecondary: '#666666',
-  lightBorder: '#E5E5EA',
-  darkBg: '#000000',
-  darkBgSecondary: '#1C1C1E',
-  darkText: '#FFFFFF',
-  darkTextSecondary: '#ABABAB',
-  darkBorder: '#2C2C2E',
-  positive: '#34C759',
-  negative: '#FF3B30',
+const { width: SW } = Dimensions.get('window');
+
+// ============================================
+// DESIGN SYSTEM
+// ============================================
+const C = {
+  // Primaire
+  p1: '#0A84FF',
+  p2: '#5E5CE6',
+
+  // Mode clair
+  lBg:     '#F0F2F5',   // gris perle — pas blanc pur
+  lCard:   '#FFFFFF',
+  lText:   '#0D0D0D',
+  lSub:    '#6B7280',
+  lBorder: '#E8EAF0',
+  lShadowD:'rgba(0,0,0,0.12)',
+  lShadowL:'rgba(255,255,255,0.9)',
+
+  // Mode sombre premium
+  dBg:     '#0A0A0F',   // noir profond légèrement bleuté
+  dCard:   '#141420',   // carte légèrement plus claire
+  dText:   '#F0F0F0',
+  dSub:    '#8A8AA0',
+  dBorder: '#1E1E2E',
+  dShadowD:'rgba(0,0,0,0.6)',
+  dShadowL:'rgba(255,255,255,0.03)',
+
+  // Sémantique
+  pos: '#00C48C',
+  neg: '#FF4757',
 };
+
+const F = { xs: 11, sm: 13, md: 15, lg: 17, xl: 20, xxl: 26, xxxl: 38 };
+
+// ============================================
+// HOOK THÈME
+// ============================================
+function useTheme() {
+  const isDark = useColorScheme() === 'dark';
+  return {
+    isDark,
+    bg:      isDark ? C.dBg     : C.lBg,
+    card:    isDark ? C.dCard   : C.lCard,
+    text:    isDark ? C.dText   : C.lText,
+    sub:     isDark ? C.dSub    : C.lSub,
+    border:  isDark ? C.dBorder : C.lBorder,
+    shadowD: isDark ? C.dShadowD: C.lShadowD,
+    shadowL: isDark ? C.dShadowL: C.lShadowL,
+  };
+}
+
+// ============================================
+// LOGO ZEVO — Z dans carré arrondi gradient
+// ============================================
+function LogoZevo({ size = 28 }: { size?: number }) {
+  const boxSize = size * 1.5;
+  return (
+    <View style={{
+      width: boxSize, height: boxSize, borderRadius: boxSize * 0.28,
+      backgroundColor: C.p1,
+      alignItems: 'center', justifyContent: 'center',
+      shadowColor: C.p1,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    }}>
+      <Text style={{
+        fontSize: size * 0.85,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        transform: [{ skewX: '-12deg' }],
+        letterSpacing: -1,
+      }}>Z</Text>
+    </View>
+  );
+}
+
+// ============================================
+// COMPOSANT CARTE — effet neumorphisme
+// ============================================
+function Card({ children, style, theme }: { children: any, style?: any, theme: any }) {
+  return (
+    <View style={[{
+      backgroundColor: theme.card,
+      borderRadius: 20,
+      padding: 20,
+      elevation: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    }, style]}>
+      {children}
+    </View>
+  );
+}
+// ============================================
+// BOUTON PREMIUM
+// ============================================
+function BtnPrimary({ label, onPress, loading }: { label: string, onPress: () => void, loading?: boolean }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{
+        backgroundColor: C.p1,
+        borderRadius: 16,
+        padding: 16,
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: C.p1,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        borderWidth: 0,
+      }}
+    >
+      <Text style={{ color: '#fff', fontSize: F.md, fontWeight: '700', letterSpacing: 0.5 }}>
+        {loading ? 'Chargement...' : label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+function BtnOutline({ label, onPress }: { label: string, onPress?: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={{
+        borderRadius: 16,
+        padding: 16,
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: C.p1,
+        elevation: 3,
+        shadowColor: C.p1,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        backgroundColor: 'transparent',
+      }}
+    >
+      <Text style={{ color: C.p1, fontSize: F.md, fontWeight: '700' }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function Tabs({ items, active, onChange, theme }: { items: {id:string,label:string}[], active: string, onChange: (s:string)=>void, theme: any }) {
+  return (
+    <View style={{
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      margin: 16,
+      borderRadius: 16,
+      padding: 4,
+      gap: 4,
+      elevation: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+    }}>
+      {items.map(item => (
+        <TouchableOpacity
+          key={item.id}
+          onPress={() => onChange(item.id)}
+          activeOpacity={0.8}
+          style={[{
+            flex: 1,
+            paddingVertical: 10,
+            borderRadius: 13,
+            alignItems: 'center',
+          }, active === item.id && {
+            backgroundColor: C.p1,
+            elevation: 8,
+            shadowColor: C.p1,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.5,
+            shadowRadius: 8,
+          }]}
+        >
+          <Text style={{
+            fontSize: F.sm,
+            fontWeight: '700',
+            color: active === item.id ? '#fff' : theme.sub,
+            letterSpacing: 0.3,
+          }}>{item.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ============================================
+// ANIMATION VALIDATION — ligne simple + son
+// ============================================
+function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => void }) {
+  const scale = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const lineAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      scale.setValue(0);
+      opacity.setValue(0);
+      lineAnim.setValue(0);
+
+      Animated.sequence([
+        Animated.parallel([
+          Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        ]),
+        Animated.timing(lineAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
+        Animated.delay(1200),
+        Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]).start(() => onFin());
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  // Longueur de la ligne animée
+  const lineWidth = lineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 44],
+  });
+
+  return (
+    <Animated.View style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center', justifyContent: 'center',
+      opacity,
+    }}>
+      {/* Fond flou semi-transparent */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+      }} />
+
+      <Animated.View style={{
+        width: 120, height: 120, borderRadius: 60,
+        borderWidth: 2,
+        borderColor: C.pos,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,196,140,0.08)',
+        transform: [{ scale }],
+      }}>
+        {/* Ligne simple de validation */}
+        <Animated.View style={{
+          width: lineWidth,
+          height: 2,
+          backgroundColor: C.pos,
+          borderRadius: 1,
+          transform: [{ rotate: '-30deg' }],
+        }} />
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+// ============================================
+// CHAMP DE SAISIE
+// ============================================
+function InputField({ label, placeholder, value, onChange, secure, keyType, theme }: any) {
+  return (
+    <View style={{
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.bg,
+      padding: 14,
+      shadowColor: theme.shadowD,
+      shadowOffset: { width: 2, height: 2 },
+      shadowOpacity: 0.6,
+      shadowRadius: 4,
+      elevation: 1,
+    }}>
+      <Text style={{ fontSize: F.xs, color: theme.sub, fontWeight: '600', marginBottom: 5 }}>{label}</Text>
+      <TextInput
+        style={{ fontSize: F.md, color: theme.text, paddingVertical: 0 }}
+        placeholder={placeholder}
+        placeholderTextColor={theme.sub}
+        secureTextEntry={secure}
+        autoCapitalize="none"
+        keyboardType={keyType || 'default'}
+        value={value}
+        onChangeText={onChange}
+      />
+    </View>
+  );
+}
+
 // ============================================
 // ÉCRAN CONNEXION
 // ============================================
 function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => void, onInscription: () => void }) {
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
-const [telephone, setTelephone] = useState('');
-const [motDePasse, setMotDePasse] = useState('');
-const [chargement, setChargement] = useState(false);
-const [erreur, setErreur] = useState('');
+  const t = useTheme();
+  const [id, setId] = useState('');
+  const [mdp, setMdp] = useState('');
+  const [load, setLoad] = useState(false);
+  const [err, setErr] = useState('');
 
   return (
-    <SafeAreaView style={[styles.pinContainer, { backgroundColor: bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
-      <View style={{ alignItems: 'center', marginBottom: 40 }}>
-        <LogoZevo taille={48} />
-        <Text style={[styles.pinSousTitre, { color: textSecondary, marginTop: 8 }]}>
-          Paiements simples pour tous
-        </Text>
-      </View>
-      <View style={[styles.champCont, { backgroundColor: bgSecondary, borderColor: border }]}>
-        <Text style={[styles.champLabel, { color: textSecondary }]}>Email ou numéro de téléphone</Text>
-        <TextInput
-         style={[styles.champInput, { color: text }]}
-  placeholder="email@exemple.com ou +243 8X..."
-  placeholderTextColor={textSecondary}
-  autoCapitalize="none"
-  value={telephone}
-  onChangeText={setTelephone}
-/>
-      </View>
-      <View style={[styles.champCont, { backgroundColor: bgSecondary, borderColor: border, marginTop: 12 }]}>
-    
-<Text style={[styles.champLabel, { color: textSecondary }]}>Mot de passe</Text>
-<TextInput
-  style={[styles.champInput, { color: text }]}
-  placeholder="••••••••"
-  placeholderTextColor={textSecondary}
-  secureTextEntry
-  value={motDePasse}
-  onChangeText={setMotDePasse}
-/>
-      </View>
-     <TouchableOpacity 
-  style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} 
-  onPress={async () => {
-    setChargement(true);
-    setErreur('');
-    const result = await apiConnexion(telephone, motDePasse);
-    setChargement(false);
-    if (result.succes) {
-        await AsyncStorage.setItem('token', result.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
-        onConnexion();
-    } else {
-        setErreur(result.erreur);
-    }
-  }}
-  activeOpacity={0.8}
->{erreur ? (
-  <Text style={{ color: COLORS.negative, fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
-    {erreur}
-  </Text>
-) : null}
-       <Text style={styles.payerBoutonTexte}>
-  {chargement ? 'Connexion...' : 'Se connecter'}
-</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onInscription} style={{ marginTop: 20 }}>
-        <Text style={{ color: COLORS.primary, fontSize: 14 }}>
-          Pas encore de compte ? <Text style={{ fontWeight: '600' }}>S'inscrire</Text>
-        </Text>
-      </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+
+      {/* Décoration fond */}
+      <View style={{
+        position: 'absolute', top: -80, right: -80,
+        width: 240, height: 240, borderRadius: 120,
+        backgroundColor: t.isDark ? 'rgba(10,132,255,0.06)' : 'rgba(10,132,255,0.05)',
+      }} />
+      <View style={{
+        position: 'absolute', bottom: -60, left: -60,
+        width: 180, height: 180, borderRadius: 90,
+        backgroundColor: t.isDark ? 'rgba(94,92,230,0.06)' : 'rgba(94,92,230,0.04)',
+      }} />
+
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+        <View style={{ alignItems: 'center', marginBottom: 36 }}>
+          <LogoZevo size={32} />
+          <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>
+            PAIEMENTS SIMPLES POUR TOUS
+          </Text>
+        </View>
+
+        <Card theme={t} style={{ gap: 14 }}>
+          <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 4 }}>
+            Connexion
+          </Text>
+          <InputField label="Email ou téléphone" placeholder="email@exemple.com ou +243..." value={id} onChange={setId} theme={t} />
+          <InputField label="Mot de passe" placeholder="••••••••" value={mdp} onChange={setMdp} secure theme={t} />
+
+          {err ? <Text style={{ color: C.neg, fontSize: F.xs, textAlign: 'center' }}>{err}</Text> : null}
+
+          <BtnPrimary label="Se connecter" loading={load} onPress={async () => {
+            setLoad(true); setErr('');
+            const r = await apiConnexion(id, mdp);
+            setLoad(false);
+            if (r.succes) {
+              await AsyncStorage.setItem('token', r.data.token);
+              await AsyncStorage.setItem('user', JSON.stringify(r.data.user));
+              onConnexion();
+            } else setErr(r.erreur);
+          }} />
+        </Card>
+
+        <TouchableOpacity onPress={onInscription} style={{ alignItems: 'center', marginTop: 24 }}>
+          <Text style={{ color: t.sub, fontSize: F.sm }}>
+            Pas encore de compte ?{' '}
+            <Text style={{ color: C.p1, fontWeight: '700' }}>S'inscrire</Text>
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -119,218 +381,156 @@ const [erreur, setErreur] = useState('');
 // ÉCRAN INSCRIPTION
 // ============================================
 function EcranInscription({ onInscription, onConnexion }: { onInscription: () => void, onConnexion: () => void }) {
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
+  const t = useTheme();
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
-  const [telephone, setTelephone] = useState('');
-  const [motDePasse, setMotDePasse] = useState('');
-  const [chargement, setChargement] = useState(false);
-  const [erreur, setErreur] = useState('');
+  const [tel, setTel] = useState('');
+  const [mdp, setMdp] = useState('');
+  const [load, setLoad] = useState(false);
+  const [err, setErr] = useState('');
 
   return (
-    <SafeAreaView style={[styles.pinContainer, { backgroundColor: bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
-      <View style={{ alignItems: 'center', marginBottom: 32 }}>
-        <LogoZevo taille={40} />
-        <Text style={[{ color: text, fontSize: 20, fontWeight: '600', marginTop: 8 }]}>
-          Créer un compte
-        </Text>
-      </View>
-      <View style={[styles.champCont, { backgroundColor: bgSecondary, borderColor: border }]}>
-        <Text style={[styles.champLabel, { color: textSecondary }]}>Nom complet</Text>
-        <TextInput
-          style={[styles.champInput, { color: text }]}
-          placeholder="Jean Kabila"
-          placeholderTextColor={textSecondary}
-          value={nom}
-          onChangeText={setNom}
-        />
-      </View>
-      <View style={[styles.champCont, { backgroundColor: bgSecondary, borderColor: border, marginTop: 12 }]}>
-        <Text style={[styles.champLabel, { color: textSecondary }]}>Numéro de téléphone</Text>
-        <TextInput
-          style={[styles.champInput, { color: text }]}
-          placeholder="+243 8X XXX XXXX"
-          placeholderTextColor={textSecondary}
-          keyboardType="phone-pad"
-          value={telephone}
-          onChangeText={setTelephone}
-        />
-      </View>
-      <View style={[styles.champCont, { backgroundColor: bgSecondary, borderColor: border, marginTop: 12 }]}>
-        <Text style={[styles.champLabel, { color: textSecondary }]}>Mot de passe</Text>
-        <TextInput
-          style={[styles.champInput, { color: text }]}
-          placeholder="••••••••"
-          placeholderTextColor={textSecondary}
-          secureTextEntry
-          value={motDePasse}
-          onChangeText={setMotDePasse}
-        />
-      </View>
-      <TouchableOpacity 
-  style={[styles.payerBouton, { backgroundColor: COLORS.primary, marginTop: 24, width: '100%' }]} 
-  onPress={async () => {
-    setChargement(true);
-    setErreur('');
-    const result = await apiInscription(nom, email, telephone, motDePasse);
-    setChargement(false);
-    if (result.succes) {
-        await AsyncStorage.setItem('token', result.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
-        onInscription();
-    } else {
-        setErreur(result.erreur);
-    }
-  }}
- activeOpacity={0.8}
->
-    {erreur ? (
-  <Text style={{ color: COLORS.negative, fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
-    {erreur}
-  </Text>
-) : null}
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <View style={{ position: 'absolute', top: -80, right: -80, width: 240, height: 240, borderRadius: 120, backgroundColor: t.isDark ? 'rgba(10,132,255,0.06)' : 'rgba(10,132,255,0.05)' }} />
 
-  <Text style={styles.payerBoutonTexte}>
-  {chargement ? 'Création...' : 'Créer mon compte'}
-</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onConnexion} style={{ marginTop: 20 }}>
-        <Text style={{ color: COLORS.primary, fontSize: 14 }}>
-          Déjà un compte ? <Text style={{ fontWeight: '600' }}>Se connecter</Text>
-        </Text>
-      </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
+        <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <LogoZevo size={32} />
+          <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>CRÉER VOTRE COMPTE</Text>
+        </View>
+
+        <Card theme={t} style={{ gap: 12 }}>
+          <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 4 }}>Inscription</Text>
+          <InputField label="Nom complet" placeholder="Jean Kabila" value={nom} onChange={setNom} theme={t} />
+          <InputField label="Email" placeholder="email@exemple.com" value={email} onChange={setEmail} keyType="email-address" theme={t} />
+          <InputField label="Téléphone" placeholder="+243 8X XXX XXXX" value={tel} onChange={setTel} keyType="phone-pad" theme={t} />
+          <InputField label="Mot de passe" placeholder="••••••••" value={mdp} onChange={setMdp} secure theme={t} />
+
+          {err ? <Text style={{ color: C.neg, fontSize: F.xs, textAlign: 'center' }}>{err}</Text> : null}
+
+          <BtnPrimary label="Créer mon compte" loading={load} onPress={async () => {
+            setLoad(true); setErr('');
+            const r = await apiInscription(nom, email, tel, mdp);
+            setLoad(false);
+            if (r.succes) {
+              await AsyncStorage.setItem('token', r.data.token);
+              await AsyncStorage.setItem('user', JSON.stringify(r.data.user));
+              onInscription();
+            } else setErr(r.erreur);
+          }} />
+        </Card>
+
+        <TouchableOpacity onPress={onConnexion} style={{ alignItems: 'center', marginTop: 24 }}>
+          <Text style={{ color: t.sub, fontSize: F.sm }}>
+            Déjà un compte ?{' '}
+            <Text style={{ color: C.p1, fontWeight: '700' }}>Se connecter</Text>
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
-  );
-}
-// ============================================
-// LOGO ZEVO
-// ============================================
-function LogoZevo({ taille = 32, couleur = COLORS.primary }: { taille?: number, couleur?: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Text style={[styles.logoZ, { fontSize: taille, color: couleur, transform: [{ skewX: '-12deg' }] }]}>Z</Text>
-      <Text style={[styles.logoTexte, { fontSize: taille * 0.85, color: couleur }]}>evo</Text>
-    </View>
-  );
-}
-
-// ============================================
-// ANIMATION SUCCÈS
-// ============================================
-function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => void }) {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      scaleAnim.setValue(0);
-      opacityAnim.setValue(0);
-      Animated.sequence([
-        Animated.parallel([
-          Animated.spring(scaleAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
-          Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        ]),
-        Animated.delay(1500),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start(() => onFin());
-    }
-  }, [visible]);
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View style={[styles.succesOverlay, { opacity: opacityAnim }]}>
-      <Animated.View style={[styles.succesCercle, { transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.succesCheck}>✓</Text>
-      </Animated.View>
-    </Animated.View>
   );
 }
 
 // ============================================
 // ÉCRAN PIN
 // ============================================
-
-
 function EcranPin({ onSuccess }: { onSuccess: () => void }) {
   const [pin, setPin] = useState('');
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
+  const shake = useRef(new Animated.Value(0)).current;
+  const t = useTheme();
 
   function secouer() {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 50, useNativeDriver: true }),
     ]).start();
   }
 
-  function appuyerChiffre(chiffre: string) {
+  function appuyer(c: string) {
     if (pin.length >= 6) return;
-    const nouveauPin = pin + chiffre;
-    setPin(nouveauPin);
-    if (nouveauPin.length === 6) {
+    const p = pin + c;
+    setPin(p);
+    if (p.length === 6) {
       setTimeout(() => {
-        if (nouveauPin === '000000') {
-          onSuccess();
-        } else {
-          secouer();
-          setPin('');
-        }
+        if (p === '000000') onSuccess();
+        else { secouer(); setPin(''); }
       }, 300);
     }
   }
 
-  function effacer() { setPin(pin.slice(0, -1)); }
-
   return (
-    <SafeAreaView style={[styles.pinContainer, { backgroundColor: bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
-      <View style={styles.pinHeader}>
-        <LogoZevo taille={40} />
-        <Text style={[styles.pinTitre, { color: text }]}>Entrez votre PIN</Text>
-        <Text style={[styles.pinSousTitre, { color: textSecondary }]}>6 chiffres pour accéder à votre compte</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+
+      {/* Déco fond */}
+      <View style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: t.isDark ? 'rgba(10,132,255,0.05)' : 'rgba(10,132,255,0.04)' }} />
+      <View style={{ position: 'absolute', bottom: -80, left: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: t.isDark ? 'rgba(94,92,230,0.05)' : 'rgba(94,92,230,0.03)' }} />
+
+      <View style={{ alignItems: 'center', marginBottom: 48 }}>
+        <LogoZevo size={32} />
+        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20, letterSpacing: -0.3 }}>
+          Entrez votre PIN
+        </Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 6 }}>6 chiffres</Text>
       </View>
-      <Animated.View style={[styles.pinPoints, { transform: [{ translateX: shakeAnim }] }]}>
-        {[0,1,2,3,4,5].map((index) => (
-          <View key={index} style={[styles.pinPoint, {
-            backgroundColor: index < pin.length ? COLORS.primary : 'transparent',
-            borderColor: index < pin.length ? COLORS.primary : textSecondary,
-          }]} />
+
+      <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 52, transform: [{ translateX: shake }] }}>
+        {[0,1,2,3,4,5].map(i => (
+          <View key={i} style={{
+            width: 14, height: 14, borderRadius: 7,
+            backgroundColor: i < pin.length ? C.p1 : 'transparent',
+            borderWidth: 1.5,
+            borderColor: i < pin.length ? C.p1 : t.sub,
+            shadowColor: i < pin.length ? C.p1 : 'transparent',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
+            elevation: i < pin.length ? 3 : 0,
+          }} />
         ))}
       </Animated.View>
-      <View style={styles.clavier}>
-        {[['1','2','3'],['4','5','6'],['7','8','9']].map((rangee, i) => (
-          <View key={i} style={styles.clavierRangee}>
-            {rangee.map((chiffre) => (
-              <TouchableOpacity key={chiffre} style={[styles.clavierTouche, { backgroundColor: bgSecondary }]} onPress={() => appuyerChiffre(chiffre)} activeOpacity={0.7}>
-                <Text style={[styles.clavierChiffre, { color: text }]}>{chiffre}</Text>
+
+      <View style={{ width: '100%', gap: 12 }}>
+        {[['1','2','3'],['4','5','6'],['7','8','9']].map((row, i) => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            {row.map(k => (
+              <TouchableOpacity
+                key={k}
+                onPress={() => appuyer(k)}
+                activeOpacity={0.75}
+                style={{
+                  width: 78, height: 78, borderRadius: 39,
+                  backgroundColor: t.card,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: t.shadowD,
+                  shadowOffset: { width: 3, height: 3 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 6,
+                  elevation: 4,
+                  borderWidth: 1,
+                  borderColor: t.border,
+                }}
+              >
+                <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
         ))}
-        <View style={styles.clavierRangee}>
-          <View style={styles.clavierToucheVide} />
-          <TouchableOpacity style={[styles.clavierTouche, { backgroundColor: bgSecondary }]} onPress={() => appuyerChiffre('0')} activeOpacity={0.7}>
-            <Text style={[styles.clavierChiffre, { color: text }]}>0</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+          <View style={{ width: 78, height: 78 }} />
+          <TouchableOpacity onPress={() => appuyer('0')} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', shadowColor: t.shadowD, shadowOffset: { width: 3, height: 3 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>0</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.clavierTouche, { backgroundColor: bgSecondary }]} onPress={effacer} activeOpacity={0.7}>
-            <Text style={[styles.clavierChiffre, { color: text }]}>⌫</Text>
+          <TouchableOpacity onPress={() => setPin(pin.slice(0,-1))} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', shadowColor: t.shadowD, shadowOffset: { width: 3, height: 3 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>⌫</Text>
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={{ color: textSecondary, fontSize: 12, marginTop: 24 }}>PIN de test : 000000</Text>
+
+      <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 32 }}>PIN de test : 000000</Text>
     </SafeAreaView>
   );
 }
@@ -338,89 +538,106 @@ function EcranPin({ onSuccess }: { onSuccess: () => void }) {
 // ============================================
 // ÉCRAN ACCUEIL
 // ============================================
-function EcranAccueil({
-  isDark,
-  onTransaction,
-  onRecevoir,
-  onNaviguer,
-}: {
-  isDark: boolean,
-  onTransaction: () => void,
-  onRecevoir: () => void,
-  onNaviguer: (ecran: string) => void,
-}) {
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
+function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, onTransaction: () => void, onNaviguer: (s: string) => void }) {
+  const t = useTheme();
 
   const actions = [
-    { label: 'Envoyer',  icone: '↑', bg: '#E5F1FF', action: onTransaction },
-    { label: 'Recevoir', icone: '↓', bg: '#E5FFF1', action: onRecevoir },
-    { label: 'Payer',    icone: '⊡', bg: '#FFF5E5', action: () => onNaviguer('payer') },
-    { label: 'Wallets',  icone: '▤', bg: '#F5E5FF', action: () => onNaviguer('wallets') },
+    { label: 'Envoyer',  icon: '↑', bg: '#E8F4FF', action: onTransaction },
+    { label: 'Recevoir', icon: '↓', bg: '#E8FFF5', action: () => onNaviguer('payer') },
+    { label: 'Payer',    icon: '⊡', bg: '#FFF8E8', action: () => onNaviguer('payer') },
+    { label: 'Wallets',  icon: '▤', bg: '#F5E8FF', action: () => onNaviguer('wallets') },
+  ];
+
+  const txs = [
+    { nom: 'Jean Kabila',  date: "Aujourd'hui · M-Pesa", mt: '-5 000 CDF', ibg: '#FFE8E8', ic: '↑', pos: false },
+    { nom: 'Diaspora BE',  date: 'Hier · Virement',      mt: '+20 000 CDF', ibg: '#E8FFE8', ic: '↓', pos: true },
+    { nom: 'Shoprite KIN', date: '12 mai · Airtel',      mt: '-3 200 CDF', ibg: '#FFF8E8', ic: '⊡', pos: false },
   ];
 
   return (
-    <ScrollView style={[styles.ecran, { backgroundColor: bg }]}>
-      <View style={[styles.accueilHeader, { backgroundColor: bg }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
+
+      {/* Déco fond */}
+      <View style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: t.isDark ? 'rgba(10,132,255,0.05)' : 'rgba(10,132,255,0.04)' }} />
+
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingTop: 28 }}>
         <View>
-          <Text style={[styles.accueilBonjour, { color: textSecondary }]}>Bonjour 👋</Text>
-          <Text style={[styles.accueilNom, { color: text }]}>Mwamba K.</Text>
+          <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 3 }}>Bonjour 👋</Text>
+          <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mwamba K.</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <LogoZevo taille={18} />
-          <View style={[styles.accueilAvatar, { backgroundColor: COLORS.primary }]}>
-            <Text style={styles.accueilAvatarText}>MK</Text>
+          <LogoZevo size={18} />
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center', shadowColor: C.p1, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: F.sm }}>MK</Text>
           </View>
         </View>
       </View>
 
-      <View style={[styles.soldeCard, {
-        backgroundColor: COLORS.primary,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
-      }]}>
-        <Text style={[styles.soldeLabel, { color: 'rgba(255,255,255,0.8)' }]}>Solde total</Text>
-        <Text style={[styles.soldeMontant, { color: '#FFFFFF' }]}>85 400 CDF</Text>
-        <Text style={[styles.soldeUsd, { color: 'rgba(255,255,255,0.7)' }]}>≈ 29,50 USD</Text>
+      {/* Carte solde premium */}
+      <View style={{
+        marginHorizontal: 16, borderRadius: 28, padding: 26,
+        backgroundColor: C.p1, marginBottom: 8, overflow: 'hidden',
+        shadowColor: C.p1, shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.4, shadowRadius: 24, elevation: 12,
+      }}>
+        {/* Décorations géométriques */}
+        <View style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        <View style={{ position: 'absolute', right: 20, bottom: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)' }} />
+        <View style={{ position: 'absolute', left: -20, bottom: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+
+        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginBottom: 8, letterSpacing: 0.5 }}>SOLDE TOTAL</Text>
+        <Text style={{ color: '#fff', fontSize: F.xxxl, fontWeight: '900', letterSpacing: -1.5 }}>85 400</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: F.xl, fontWeight: '300', marginTop: -4 }}>CDF</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: F.sm, marginTop: 8 }}>≈ 29,50 USD</Text>
       </View>
 
-      <View style={[styles.actionsRow, { borderBottomColor: border, borderTopColor: border, backgroundColor: bg }]}>
-        {actions.map((action) => (
-          <TouchableOpacity key={action.label} style={styles.actionItem} onPress={action.action} activeOpacity={0.7}>
-            <View style={[styles.actionIcone, { backgroundColor: action.bg }]}>
-              <Text style={styles.actionIconeText}>{action.icone}</Text>
+      {/* Actions */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 20 }}>
+        {actions.map(a => (
+          <TouchableOpacity key={a.label} style={{ alignItems: 'center', gap: 8 }} onPress={a.action} activeOpacity={0.75}>
+            <View style={{
+              width: 52, height: 52, borderRadius: 26,
+              backgroundColor: a.bg,
+              alignItems: 'center', justifyContent: 'center',
+              shadowColor: 'rgba(0,0,0,0.1)',
+              shadowOffset: { width: 2, height: 4 },
+              shadowOpacity: 1,
+              shadowRadius: 6,
+              elevation: 3,
+            }}>
+              <Text style={{ fontSize: 18 }}>{a.icon}</Text>
             </View>
-            <Text style={[styles.actionLabel, { color: textSecondary }]}>{action.label}</Text>
+            <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '600' }}>{a.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <View style={[styles.section, { backgroundColor: bg }]}>
-        <Text style={[styles.sectionTitre, { color: textSecondary }]}>RÉCENTES</Text>
-        {[
-          { nom: 'Jean Kabila',  date: "Aujourd'hui · M-Pesa", montant: '-5 000 CDF', bg: '#FFE5E5', icone: '↑', positif: false },
-          { nom: 'Diaspora BE',  date: 'Hier · Virement',      montant: '+20 000 CDF', bg: '#E5FFE5', icone: '↓', positif: true },
-          { nom: 'Shoprite KIN', date: '12 mai · Airtel',      montant: '-3 200 CDF', bg: '#FFF5E5', icone: '⊡', positif: false },
-        ].map((tx) => (
-          <View key={tx.nom} style={[styles.transaction, { borderBottomColor: border }]}>
-            <View style={[styles.txIcone, { backgroundColor: tx.bg }]}>
-              <Text>{tx.icone}</Text>
+      {/* Transactions */}
+      <View style={{ paddingHorizontal: 16 }}>
+        <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>RÉCENTES</Text>
+        <Card theme={t} style={{ padding: 0, gap: 0 }}>
+          {txs.map((tx, i) => (
+            <View key={tx.nom} style={{
+              flexDirection: 'row', alignItems: 'center',
+              paddingVertical: 14, paddingHorizontal: 16,
+              borderBottomWidth: i < txs.length - 1 ? 0.5 : 0,
+              borderBottomColor: t.border,
+            }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tx.ibg, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text style={{ fontSize: 14 }}>{tx.ic}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{tx.nom}</Text>
+                <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{tx.date}</Text>
+              </View>
+              <Text style={{ fontSize: F.md, fontWeight: '700', color: tx.pos ? C.pos : C.neg }}>{tx.mt}</Text>
             </View>
-            <View style={styles.txInfo}>
-              <Text style={[styles.txNom, { color: text }]}>{tx.nom}</Text>
-              <Text style={[styles.txDate, { color: textSecondary }]}>{tx.date}</Text>
-            </View>
-            <Text style={[styles.txMontant, { color: tx.positif ? COLORS.positive : COLORS.negative }]}>
-              {tx.montant}
-            </Text>
-          </View>
-        ))}
+          ))}
+        </Card>
       </View>
+
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
@@ -429,184 +646,143 @@ function EcranAccueil({
 // ÉCRAN TRANSFERTS
 // ============================================
 function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
-  const [ongletActif, setOngletActif] = useState('tous');
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
+  const [tab, setTab] = useState('tous');
+  const t = useTheme();
+
+  const tabItems = [
+    { id: 'tous', label: 'Tous' },
+    { id: 'envoye', label: 'Envoyé' },
+    { id: 'recu', label: 'Reçu' },
+  ];
 
   return (
-    <View style={[styles.ecran, { backgroundColor: bg }]}>
-      <View style={[styles.pageHeader, { borderBottomColor: border, gap: 8 }]}>
-        <LogoZevo taille={20} />
-        <Text style={[styles.pageTitre, { color: text }]}>Transferts</Text>
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
+        <LogoZevo size={18} />
+        <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Transferts</Text>
       </View>
-      <View style={[styles.onglets, { backgroundColor: bgSecondary }]}>
-        {['tous', 'envoye', 'recu'].map((onglet) => (
-          <TouchableOpacity
-            key={onglet}
-            style={[styles.onglet, ongletActif === onglet && { backgroundColor: COLORS.primary }]}
-            onPress={() => setOngletActif(onglet)}
-          >
-            <Text style={[styles.ongletTexte, { color: ongletActif === onglet ? '#FFFFFF' : textSecondary }]}>
-              {onglet === 'tous' ? 'Tous' : onglet === 'envoye' ? 'Envoyé' : 'Reçu'}
-            </Text>
-          </TouchableOpacity>
-        ))}
+
+      <Tabs items={tabItems} active={tab} onChange={setTab} theme={t} />
+
+      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <BtnPrimary label="+ Nouveau transfert" onPress={onTransaction} />
       </View>
-      <TouchableOpacity style={[styles.nouveauTransfert, { backgroundColor: COLORS.primary }]} onPress={onTransaction} activeOpacity={0.8}>
-        <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>+ Nouveau transfert</Text>
-      </TouchableOpacity>
+
       <ScrollView>
-        {(ongletActif === 'tous' || ongletActif === 'envoye') && (
-          <View style={[styles.transaction, { borderBottomColor: border }]}>
-            <View style={[styles.txIcone, { backgroundColor: '#FFE5E5' }]}><Text>↑</Text></View>
-            <View style={styles.txInfo}>
-              <Text style={[styles.txNom, { color: text }]}>Jean Kabila</Text>
-              <Text style={[styles.txDate, { color: textSecondary }]}>Aujourd'hui · M-Pesa</Text>
+        <Card theme={t} style={{ marginHorizontal: 16, padding: 0 }}>
+          {(tab === 'tous' || tab === 'envoye') && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text>↑</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Jean Kabila</Text>
+                <Text style={{ fontSize: F.xs, color: t.sub }}>Aujourd'hui · M-Pesa</Text>
+              </View>
+              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.neg }}>-5 000 CDF</Text>
             </View>
-            <Text style={[styles.txMontant, { color: COLORS.negative }]}>-5 000 CDF</Text>
-          </View>
-        )}
-        {(ongletActif === 'tous' || ongletActif === 'recu') && (
-          <View style={[styles.transaction, { borderBottomColor: border }]}>
-            <View style={[styles.txIcone, { backgroundColor: '#E5FFE5' }]}><Text>↓</Text></View>
-            <View style={styles.txInfo}>
-              <Text style={[styles.txNom, { color: text }]}>Diaspora BE</Text>
-              <Text style={[styles.txDate, { color: textSecondary }]}>Hier · Virement</Text>
+          )}
+          {(tab === 'tous' || tab === 'recu') && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8FFE8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text>↓</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Diaspora BE</Text>
+                <Text style={{ fontSize: F.xs, color: t.sub }}>Hier · Virement</Text>
+              </View>
+              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.pos }}>+20 000 CDF</Text>
             </View>
-            <Text style={[styles.txMontant, { color: COLORS.positive }]}>+20 000 CDF</Text>
-          </View>
-        )}
+          )}
+        </Card>
       </ScrollView>
     </View>
   );
 }
 
 // ============================================
-// ÉCRAN PAYER — 2 onglets
+// ÉCRAN PAYER
 // ============================================
 function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
-  const [ongletActif, setOngletActif] = useState('payer');
+  const [tab, setTab] = useState('payer');
   const [walletQR, setWalletQR] = useState('mpesa');
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
+  const t = useTheme();
+
+  const tabItems = [
+    { id: 'payer', label: 'Payer' },
+    { id: 'monqr', label: 'Mon QR' },
+  ];
+
+  const walletItems = [
+    { id: 'mpesa', label: 'M-Pesa' },
+    { id: 'airtel', label: 'Airtel' },
+    { id: 'orange', label: 'Orange' },
+    { id: 'autre', label: 'Autre' },
+  ];
 
   return (
-    <View style={[styles.ecran, { backgroundColor: bg }]}>
-      <View style={[styles.pageHeader, { borderBottomColor: border, gap: 8 }]}>
-        <LogoZevo taille={20} />
-        <Text style={[styles.pageTitre, { color: text }]}>Payer</Text>
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
+        <LogoZevo size={18} />
+        <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Payer</Text>
       </View>
 
-      {/* 2 onglets */}
-      <View style={[styles.onglets, { backgroundColor: bgSecondary }]}>
-        <TouchableOpacity
-          style={[styles.onglet, ongletActif === 'payer' && { backgroundColor: COLORS.primary }]}
-          onPress={() => setOngletActif('payer')}
-        >
-          <Text style={[styles.ongletTexte, { color: ongletActif === 'payer' ? '#FFFFFF' : textSecondary }]}>
-            Payer
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.onglet, ongletActif === 'monqr' && { backgroundColor: COLORS.primary }]}
-          onPress={() => setOngletActif('monqr')}
-        >
-          <Text style={[styles.ongletTexte, { color: ongletActif === 'monqr' ? '#FFFFFF' : textSecondary }]}>
-            Mon QR
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Tabs items={tabItems} active={tab} onChange={setTab} theme={t} />
 
-      {/* Contenu onglet Payer */}
-      {ongletActif === 'payer' && (
+      {tab === 'payer' && (
         <ScrollView>
-          <View style={styles.payerContenu}>
+          <View style={{ padding: 16, gap: 12 }}>
+            <BtnPrimary label="Scanner un QR Code" onPress={onTransaction} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
+              <Text style={{ color: t.sub, fontSize: F.sm }}>ou</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
+            </View>
+            <BtnOutline label="Entrer un numéro" onPress={onTransaction} />
 
-            {/* Champ numéro de téléphone */}
-            <TouchableOpacity style={[styles.payerBouton, { backgroundColor: COLORS.primary }]} onPress={onTransaction} activeOpacity={0.8}>
-  <Text style={styles.payerBoutonTexte}>Scanner un QR Code</Text>
-</TouchableOpacity>
-
-<Text style={[styles.payerOu, { color: textSecondary }]}>— ou —</Text>
-
-<TouchableOpacity style={[styles.payerBoutonOutline, { borderColor: COLORS.primary }]} onPress={onTransaction} activeOpacity={0.8}>
-  <Text style={[styles.payerBoutonOutlineTexte, { color: COLORS.primary }]}>Entrer un numéro</Text>
-</TouchableOpacity>
-
-            {/* Marchands populaires */}
-            <Text style={[styles.sectionTitre, { color: textSecondary, marginTop: 32 }]}>MARCHANDS POPULAIRES</Text>
-            {[
-              { nom: 'Shoprite Kinshasa', cat: 'Grande distribution' },
-              { nom: 'Total Energies',    cat: 'Station-service' },
-              { nom: 'Pharmacie Centrale', cat: 'Santé' },
-              { nom: 'UNIKIN',            cat: 'Éducation' },
-            ].map((marchand) => (
-              <TouchableOpacity key={marchand.nom} style={[styles.marchandItem, { backgroundColor: bgSecondary }]} onPress={onTransaction} activeOpacity={0.7}>
-                <View style={styles.txInfo}>
-                  <Text style={[styles.txNom, { color: text }]}>{marchand.nom}</Text>
-                  <Text style={[styles.txDate, { color: textSecondary }]}>{marchand.cat}</Text>
-                </View>
-                <Text style={{ color: textSecondary }}>›</Text>
-              </TouchableOpacity>
-            ))}
+            <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 8 }}>MARCHANDS POPULAIRES</Text>
+            <Card theme={t} style={{ padding: 0 }}>
+              {[
+                { nom: 'Shoprite Kinshasa', cat: 'Grande distribution' },
+                { nom: 'Total Energies', cat: 'Station-service' },
+                { nom: 'Pharmacie Centrale', cat: 'Santé' },
+                { nom: 'UNIKIN', cat: 'Éducation' },
+              ].map((m, i, arr) => (
+                <TouchableOpacity key={m.nom} onPress={onTransaction} activeOpacity={0.75}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: i < arr.length - 1 ? 0.5 : 0, borderBottomColor: t.border }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{m.nom}</Text>
+                    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{m.cat}</Text>
+                  </View>
+                  <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </Card>
           </View>
         </ScrollView>
       )}
 
-      {/* Contenu onglet Mon QR */}
-      {ongletActif === 'monqr' && (
+      {tab === 'monqr' && (
         <ScrollView contentContainerStyle={{ alignItems: 'center', padding: 24 }}>
+          <Card theme={t} style={{ width: 190, height: 190, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Text style={{ fontSize: 110 }}>▦</Text>
+          </Card>
 
-          {/* QR Code */}
-          <View style={[styles.qrContainer, { backgroundColor: bgSecondary }]}>
-            <Text style={{ fontSize: 120 }}>▦</Text>
-          </View>
+          <Text style={{ fontSize: F.lg, fontWeight: '700', color: t.text, marginBottom: 4 }}>Mwamba Kalombo</Text>
+          <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 20 }}>+243 81 234 5678</Text>
 
-          <Text style={[styles.recevoirNom, { color: text }]}>Mwamba Kalombo</Text>
-          <Text style={[styles.recevoirTel, { color: textSecondary }]}>+243 81 234 5678</Text>
+          <Tabs items={walletItems} active={walletQR} onChange={setWalletQR} theme={t} />
 
-          {/* Choix wallet */}
-          <View style={[styles.onglets, { backgroundColor: bgSecondary, width: '100%' }]}>
-            {[
-              { id: 'mpesa',  label: 'M-Pesa' },
-              { id: 'airtel', label: 'Airtel' },
-              { id: 'orange', label: 'Orange' },
-            ].map((wallet) => (
-              <TouchableOpacity
-                key={wallet.id}
-                style={[styles.onglet, walletQR === wallet.id && { backgroundColor: COLORS.primary }]}
-                onPress={() => setWalletQR(wallet.id)}
-              >
-                <Text style={[styles.ongletTexte, { color: walletQR === wallet.id ? '#FFFFFF' : textSecondary }]}>
-                  {wallet.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={[styles.recevoirInfo, { color: textSecondary }]}>
-            Partage ce QR code pour recevoir de l'argent depuis n'importe quel réseau
+          <Text style={{ fontSize: F.xs, color: t.sub, textAlign: 'center', marginVertical: 16, lineHeight: 18 }}>
+            Partage ce QR pour recevoir depuis n'importe quel réseau
           </Text>
 
-    <TouchableOpacity style={[styles.payerBouton, { backgroundColor: COLORS.primary, width: '100%' }]}>
-  <Text style={styles.payerBoutonTexte}>Partager mon QR code</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={[styles.payerBoutonOutline, { borderColor: COLORS.primary, width: '100%', marginTop: 8 }]}>
-  <Text style={[styles.payerBoutonOutlineTexte, { color: COLORS.primary }]}>
-    Télécharger pour impression
-  </Text>
-</TouchableOpacity>
-
+          <View style={{ width: '100%', gap: 10 }}>
+            <BtnPrimary label="Partager mon QR" onPress={() => {}} />
+            <BtnOutline label="Télécharger pour impression" onPress={() => {}} />
+          </View>
         </ScrollView>
       )}
-
     </View>
   );
 }
@@ -615,47 +791,47 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
 // ÉCRAN WALLETS
 // ============================================
 function EcranWallets({ isDark }: { isDark: boolean }) {
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
+  const t = useTheme();
 
   const wallets = [
-    { nom: 'Vodacom M-Pesa',  solde: '32 500', usd: '11,24', couleur: '#E5F5EE', textCouleur: '#085041' },
-    { nom: 'Airtel Money',    solde: '18 200', usd: '6,30',  couleur: '#FFE5E5', textCouleur: '#791F1F' },
-    { nom: 'Orange Money',    solde: '8 700',  usd: '3,01',  couleur: '#FFF5E5', textCouleur: '#633806' },
-    { nom: 'Rawbank · *4521', solde: '26 000', usd: '8,99',  couleur: '#E5F1FF', textCouleur: '#0C447C' },
+    { nom: 'Vodacom M-Pesa',  solde: '32 500', usd: '11,24', bg: '#0A5C3C', accent: 'rgba(255,255,255,0.15)' },
+    { nom: 'Airtel Money',    solde: '18 200', usd: '6,30',  bg: '#8B0000', accent: 'rgba(255,255,255,0.12)' },
+    { nom: 'Orange Money',    solde: '8 700',  usd: '3,01',  bg: '#7A4500', accent: 'rgba(255,255,255,0.12)' },
+    { nom: 'Rawbank · *4521', solde: '26 000', usd: '8,99',  bg: '#0A2A6E', accent: 'rgba(255,255,255,0.12)' },
   ];
 
   return (
-    <ScrollView style={[styles.ecran, { backgroundColor: bg }]}>
-      <View style={[styles.pageHeader, { borderBottomColor: border, gap: 8 }]}>
-        <LogoZevo taille={20} />
-        <Text style={[styles.pageTitre, { color: text }]}>Mes Wallets</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
+      <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
+        <LogoZevo size={18} />
+        <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mes Wallets</Text>
       </View>
-      <View style={{ padding: 16, gap: 12 }}>
-        {wallets.map((wallet) => (
-          <TouchableOpacity key={wallet.nom} activeOpacity={0.8} style={[styles.walletCard, {
-            backgroundColor: wallet.couleur,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
-          }]}>
+
+      <View style={{ padding: 16, gap: 14 }}>
+        {wallets.map(w => (
+          <TouchableOpacity key={w.nom} activeOpacity={0.85} style={{
+            borderRadius: 22, padding: 22, backgroundColor: w.bg, overflow: 'hidden',
+            shadowColor: w.bg, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
+          }}>
+            {/* Déco géométrique */}
+            <View style={{ position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: w.accent }} />
+            <View style={{ position: 'absolute', right: 20, bottom: -20, width: 70, height: 70, borderRadius: 35, backgroundColor: w.accent }} />
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View>
-                <Text style={[styles.walletNom, { color: wallet.textCouleur }]}>{wallet.nom}</Text>
-                <Text style={[styles.walletSolde, { color: wallet.textCouleur }]}>{wallet.solde} CDF</Text>
-                <Text style={[styles.walletUsd, { color: wallet.textCouleur, opacity: 0.7 }]}>≈ {wallet.usd} USD</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.xs, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>
+                  {w.nom.toUpperCase()}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{w.solde}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, fontWeight: '300' }}>CDF</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: F.xs, marginTop: 6 }}>≈ {w.usd} USD</Text>
               </View>
-              <Text style={{ color: wallet.textCouleur, fontSize: 20 }}>›</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>›</Text>
             </View>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[styles.ajouterWallet, { borderColor: COLORS.primary }]}>
-          <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 15 }}>+ Ajouter un wallet</Text>
-        </TouchableOpacity>
+
+        <BtnOutline label="+ Ajouter un wallet" onPress={() => {}} />
       </View>
     </ScrollView>
   );
@@ -665,49 +841,49 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 // ÉCRAN PROFIL
 // ============================================
 function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  const text = isDark ? COLORS.darkText : COLORS.lightText;
-  const textSecondary = isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
-  const bgSecondary = isDark ? COLORS.darkBgSecondary : COLORS.lightBgSecondary;
+  const t = useTheme();
+
+  const options = [
+    'Sécurité & PIN', 'Limites de transaction', 'Notifications',
+    'Langue', 'Accessibilité', 'Aide & Support', 'Se déconnecter',
+  ];
 
   return (
-    <ScrollView style={[styles.ecran, { backgroundColor: bg }]}>
-      <View style={[styles.pageHeader, { borderBottomColor: border, gap: 8 }]}>
-        <LogoZevo taille={20} />
-        <Text style={[styles.pageTitre, { color: text }]}>Profil</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
+      <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
+        <LogoZevo size={18} />
+        <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Profil</Text>
       </View>
-      <View style={[styles.profilInfo, { borderBottomColor: border }]}>
-        <View style={[styles.profilAvatar, { backgroundColor: COLORS.primary }]}>
-          <Text style={styles.profilAvatarText}>MK</Text>
+
+      {/* Hero profil */}
+      <View style={{ alignItems: 'center', padding: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+        <View style={{
+          width: 76, height: 76, borderRadius: 38,
+          backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center',
+          marginBottom: 14, shadowColor: C.p1,
+          shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+        }}>
+          <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>MK</Text>
         </View>
-        <Text style={[styles.profilNom, { color: text }]}>Mwamba Kalombo</Text>
-        <Text style={[styles.profilTel, { color: textSecondary }]}>+243 81 234 5678</Text>
-        <View style={styles.profilBadge}>
-          <Text style={styles.profilBadgeTexte}>KYC Vérifié ✓</Text>
+        <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text, letterSpacing: -0.3 }}>Mwamba Kalombo</Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, marginBottom: 14 }}>+243 81 234 5678</Text>
+        <View style={{ backgroundColor: '#E8FFF5', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
+          <Text style={{ color: '#085041', fontSize: F.xs, fontWeight: '700' }}>KYC Vérifié ✓</Text>
         </View>
       </View>
-      <View style={{ padding: 16 }}>
-        {[
-          'Sécurité & PIN',
-          'Limites de transaction',
-          'Notifications',
-          'Langue',
-          'Accessibilité',
-          'Aide & Support',
-          'Se déconnecter',
-        ].map((option) => (
-       <TouchableOpacity 
-  key={option} 
-  style={[styles.profilOption, { borderBottomColor: border, backgroundColor: bgSecondary }]} 
-  activeOpacity={0.7}
-  onPress={option === 'Se déconnecter' ? onDeconnexion : undefined}
->
-  <Text style={[styles.profilOptionTexte, { color: option === 'Se déconnecter' ? COLORS.negative : text }]}>
-    {option}
-  </Text>
-  <Text style={{ color: textSecondary }}>›</Text>
-</TouchableOpacity>
+
+      <View style={{ padding: 16, gap: 8 }}>
+        {options.map(opt => (
+          <TouchableOpacity
+            key={opt}
+            onPress={opt === 'Se déconnecter' ? onDeconnexion : undefined}
+            activeOpacity={0.75}
+          >
+            <Card theme={t} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
+              <Text style={{ fontSize: F.md, color: opt === 'Se déconnecter' ? C.neg : t.text, fontWeight: '500' }}>{opt}</Text>
+              <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
+            </Card>
+          </TouchableOpacity>
         ))}
       </View>
     </ScrollView>
@@ -715,29 +891,45 @@ function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion
 }
 
 // ============================================
-// BARRE NAVIGATION
+// NAVBAR
 // ============================================
-function BarreNavigation({ ecranActif, onChanger, isDark }: { ecranActif: string, onChanger: (ecran: string) => void, isDark: boolean }) {
-  const bg = isDark ? COLORS.darkBgSecondary : COLORS.lightBg;
-  const border = isDark ? COLORS.darkBorder : COLORS.lightBorder;
-  const onglets = [
-    { id: 'accueil',    label: 'Accueil',    icone: '⌂' },
-    { id: 'transferts', label: 'Transferts', icone: '⇄' },
-    { id: 'payer',      label: 'Payer',      icone: '⊡' },
-    { id: 'wallets',    label: 'Wallets',    icone: '▤' },
-    { id: 'profil',     label: 'Profil',     icone: '◯' },
+function Navbar({ active, onChange, isDark }: { active: string, onChange: (s: string) => void, isDark: boolean }) {
+  const t = useTheme();
+
+  const items = [
+    { id: 'accueil',    label: 'Accueil',    icon: '⌂' },
+    { id: 'transferts', label: 'Transferts', icon: '⇄' },
+    { id: 'payer',      label: 'Payer',      icon: '⊡' },
+    { id: 'wallets',    label: 'Wallets',    icon: '▤' },
+    { id: 'profil',     label: 'Profil',     icon: '◯' },
   ];
 
   return (
-    <View style={[styles.navbar, { backgroundColor: bg, borderTopColor: border }]}>
-      {onglets.map((onglet) => (
-        <TouchableOpacity key={onglet.id} style={styles.navItem} onPress={() => onChanger(onglet.id)} activeOpacity={0.7}>
-          {ecranActif === onglet.id && <View style={styles.navPointActif} />}
-          <Text style={[styles.navIcone, { color: ecranActif === onglet.id ? COLORS.primary : (isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary) }]}>
-            {onglet.icone}
-          </Text>
-          <Text style={[styles.navLabel, { color: ecranActif === onglet.id ? COLORS.primary : (isDark ? COLORS.darkTextSecondary : COLORS.lightTextSecondary) }]}>
-            {onglet.label}
+    <View style={{
+      flexDirection: 'row',
+      backgroundColor: t.card,
+      borderTopWidth: 0.5,
+      borderTopColor: t.border,
+      paddingBottom: 8, paddingTop: 8,
+      shadowColor: t.shadowD,
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 8,
+    }}>
+      {items.map(item => (
+        <TouchableOpacity
+          key={item.id}
+          style={{ flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4 }}
+          onPress={() => onChange(item.id)}
+          activeOpacity={0.75}
+        >
+          {active === item.id && (
+            <View style={{ position: 'absolute', top: 0, width: 4, height: 4, borderRadius: 2, backgroundColor: C.p1 }} />
+          )}
+          <Text style={{ fontSize: 20, color: active === item.id ? C.p1 : t.sub }}>{item.icon}</Text>
+          <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 0.3, color: active === item.id ? C.p1 : t.sub }}>
+            {item.label}
           </Text>
         </TouchableOpacity>
       ))}
@@ -746,203 +938,59 @@ function BarreNavigation({ ecranActif, onChanger, isDark }: { ecranActif: string
 }
 
 // ============================================
-// APP PRINCIPALE
+// APP
 // ============================================
 export default function App() {
-  const [pinValide, setPinValide] = useState(false);
-  const [ecranActif, setEcranActif] = useState('accueil');
+  const [pinOk, setPinOk] = useState(false);
+  const [screen, setScreen] = useState('accueil');
   const [succesVisible, setSuccesVisible] = useState(false);
   const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | null>('connexion');
-  const [chargementInitial, setChargementInitial] = useState(true);
-  const isDark = useColorScheme() === 'dark';
-  const bg = isDark ? COLORS.darkBg : COLORS.lightBg;
-  // Vérifier si l'utilisateur est déjà connecté au démarrage
-useEffect(() => {
-    async function verifierToken() {
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
-            setEcranAuth(null); // déjà connecté → skip connexion
-        }
-        setChargementInitial(false);
-    }
-    verifierToken();
-}, []);
+  const [loading, setLoading] = useState(true);
+  const t = useTheme();
 
-// Afficher un écran vide pendant le chargement initial
-if (chargementInitial) {
+  useEffect(() => {
+async function check() {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    if (token) setEcranAuth(null);
+  } catch (e) {
+    console.log('AsyncStorage error:', e);
+  } finally {
+    setLoading(false);
+  }
+}
+check();
+  }, []);
+
+  if (loading) {
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.lightBg, alignItems: 'center', justifyContent: 'center' }}>
-            <LogoZevo taille={48} />
-        </SafeAreaView>
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <LogoZevo size={40} />
+      </SafeAreaView>
     );
-}
+  }
 
-  function afficherSucces() { setSuccesVisible(true); }
-
-if (ecranAuth === 'connexion') {
-  return (
-    <EcranConnexion
-      onConnexion={() => setEcranAuth(null)}
-      onInscription={() => setEcranAuth('inscription')}
-    />
-  );
-}
-
-if (ecranAuth === 'inscription') {
-  return (
-    <EcranInscription
-      onInscription={() => setEcranAuth(null)}
-      onConnexion={() => setEcranAuth('connexion')}
-    />
-  );
-}
-
-if (!pinValide) {
-  return <EcranPin onSuccess={() => setPinValide(true)} />;
-}
+  if (ecranAuth === 'connexion') return <EcranConnexion onConnexion={() => setEcranAuth(null)} onInscription={() => setEcranAuth('inscription')} />;
+  if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth(null)} onConnexion={() => setEcranAuth('connexion')} />;
+  if (!pinOk) return <EcranPin onSuccess={() => setPinOk(true)} />;
 
   return (
-    <SafeAreaView style={[styles.appContainer, { backgroundColor: bg }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
-      {ecranActif === 'accueil'    && <EcranAccueil    isDark={isDark} onTransaction={afficherSucces} onRecevoir={() => setEcranActif('payer')} onNaviguer={setEcranActif} />}
-      {ecranActif === 'transferts' && <EcranTransferts isDark={isDark} onTransaction={afficherSucces} />}
-      {ecranActif === 'payer'      && <EcranPayer      isDark={isDark} onTransaction={afficherSucces} />}
-      {ecranActif === 'wallets'    && <EcranWallets    isDark={isDark} />}
- {ecranActif === 'profil' && <EcranProfil isDark={isDark} onDeconnexion={async () => {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
-    setEcranAuth('connexion');
-}} />}
+      {screen === 'accueil'    && <EcranAccueil    isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} onNaviguer={setScreen} />}
+      {screen === 'transferts' && <EcranTransferts isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} />}
+      {screen === 'payer'      && <EcranPayer      isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} />}
+      {screen === 'wallets'    && <EcranWallets    isDark={t.isDark} />}
+      {screen === 'profil'     && <EcranProfil     isDark={t.isDark} onDeconnexion={async () => {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+        setPinOk(false);
+        setEcranAuth('connexion');
+      }} />}
 
-      <BarreNavigation ecranActif={ecranActif} onChanger={setEcranActif} isDark={isDark} />
-
+      <Navbar active={screen} onChange={setScreen} isDark={t.isDark} />
       <AnimationSucces visible={succesVisible} onFin={() => setSuccesVisible(false)} />
-
     </SafeAreaView>
   );
 }
-
-// ============================================
-// STYLES
-// ============================================
-const styles = StyleSheet.create({
-
-  appContainer: { flex: 1 },
-  ecran: { flex: 1 },
-
-  logoZ: { fontWeight: '800' },
-  logoTexte: { fontWeight: '700' },
-
-  succesOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  succesCercle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'transparent',
-    borderWidth: 3,
-    borderColor: COLORS.positive,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  succesCheck: {
-    fontSize: 48,
-    color: COLORS.positive,
-    fontWeight: '100',
-  },
-
-  pinContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  pinHeader: { alignItems: 'center', marginBottom: 48, gap: 12 },
-  pinTitre: { fontSize: 20, fontWeight: '600' },
-  pinSousTitre: { fontSize: 14, textAlign: 'center' },
-  pinPoints: { flexDirection: 'row', gap: 16, marginBottom: 48 },
-  pinPoint: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
-  clavier: { width: '100%', gap: 12 },
-  clavierRangee: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
-  clavierTouche: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
-  clavierToucheVide: { width: 80, height: 80 },
-  clavierChiffre: { fontSize: 24, fontWeight: '400' },
-
-  accueilHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingTop: 32 },
-  accueilBonjour: { fontSize: 14, marginBottom: 4 },
-  accueilNom: { fontSize: 22, fontWeight: '600' },
-  accueilAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  accueilAvatarText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  soldeCard: { marginHorizontal: 16, borderRadius: 20, padding: 24, marginBottom: 8 },
-  soldeLabel: { fontSize: 13, marginBottom: 6 },
-  soldeMontant: { fontSize: 34, fontWeight: '700' },
-  soldeUsd: { fontSize: 13, marginTop: 4 },
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-around', padding: 20, borderTopWidth: 0.5, borderBottomWidth: 0.5, marginVertical: 8 },
-  actionItem: { alignItems: 'center', gap: 8 },
-  actionIcone: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  actionIconeText: { fontSize: 20 },
-  actionLabel: { fontSize: 12, fontWeight: '500' },
-  section: { padding: 20 },
-  sectionTitre: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 16 },
-  transaction: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 0.5, paddingHorizontal: 16 },
-  txIcone: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  txInfo: { flex: 1 },
-  txNom: { fontSize: 14, fontWeight: '500' },
-  txDate: { fontSize: 12, marginTop: 2 },
-  txMontant: { fontSize: 14, fontWeight: '600' },
-
-  pageHeader: { padding: 20, paddingTop: 32, borderBottomWidth: 0.5 },
-  pageTitre: { fontSize: 24, fontWeight: '700' },
-
-  onglets: { flexDirection: 'row', margin: 16, borderRadius: 12, padding: 4, gap: 4 },
-  onglet: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  ongletTexte: { fontSize: 13, fontWeight: '600' },
-
-  nouveauTransfert: { marginHorizontal: 16, marginBottom: 8, padding: 14, borderRadius: 14, alignItems: 'center' },
-
-  champNumeroCont: { width: '100%', borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 16 },
-  champNumeroLabel: { fontSize: 12, marginBottom: 4 },
-  champNumero: { fontSize: 16, fontWeight: '500' },
-
-  payerContenu: { padding: 24, alignItems: 'center' },
-  payerBouton: { width: '100%', padding: 16, borderRadius: 14, alignItems: 'center', marginBottom: 16 },
-  payerBoutonTexte: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  payerOu: { fontSize: 14, marginBottom: 16 },
-  payerBoutonOutline: { width: '100%', padding: 16, borderRadius: 14, alignItems: 'center', borderWidth: 1.5, marginBottom: 8 },
-  payerBoutonOutlineTexte: { fontSize: 16, fontWeight: '600' },
-  marchandItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, marginBottom: 8, width: '100%' },
-
-  walletCard: { borderRadius: 16, padding: 20 },
-  walletNom: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  walletSolde: { fontSize: 24, fontWeight: '700' },
-  walletUsd: { fontSize: 13, marginTop: 4 },
-  ajouterWallet: { padding: 16, borderRadius: 14, alignItems: 'center', borderWidth: 1.5, marginTop: 8 },
-
-  profilInfo: { alignItems: 'center', padding: 24, borderBottomWidth: 0.5 },
-  profilAvatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  profilAvatarText: { color: '#FFFFFF', fontSize: 24, fontWeight: '600' },
-  profilNom: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
-  profilTel: { fontSize: 14, marginBottom: 12 },
-  profilBadge: { backgroundColor: '#E5FFE5', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
-  profilBadgeTexte: { color: '#085041', fontSize: 12, fontWeight: '500' },
-  profilOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 8 },
-  profilOptionTexte: { fontSize: 15 },
-
-
-  champCont: { width: '100%', borderRadius: 14, borderWidth: 1, padding: 16 },
-champLabel: { fontSize: 12, marginBottom: 4 },
-champInput: { fontSize: 16, fontWeight: '500' },
-
-
-  navbar: { flexDirection: 'row', borderTopWidth: 0.5, paddingBottom: 8, paddingTop: 8 },
-  navItem: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
-  navPointActif: { position: 'absolute', top: 0, width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
-  navIcone: { fontSize: 22 },
-  navLabel: { fontSize: 10, fontWeight: '500' },
-
-  qrContainer: { width: 200, height: 200, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  recevoirNom: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
-  recevoirTel: { fontSize: 14, marginBottom: 20 },
-  recevoirInfo: { fontSize: 13, textAlign: 'center', marginVertical: 20, lineHeight: 20 },
-
-});
