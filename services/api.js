@@ -70,5 +70,37 @@ export const connexion = async (identifiant, motDePasse) => {
         };
     }
 };
+// Créer un PIN
+export const creerPin = async (userId, pin) => {
+    try {
+        const reponse = await api.post('/auth/pin/creer', {
+            user_id: userId,
+            pin,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
+
+// Vérifier un PIN
+export const verifierPin = async (userId, pin) => {
+    try {
+        const reponse = await api.post('/auth/pin/verifier', {
+            user_id: userId,
+            pin,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
+
 
 export default api;

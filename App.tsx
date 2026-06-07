@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 
 const { width: SW } = Dimensions.get('window');
+import Sound from 'react-native-sound';
 
 // ============================================
 // DESIGN SYSTEM
 // ============================================
 const C = {
   // Primaire
-  p1: '#0A84FF',
+  p1: '#1A6FD4',
   p2: '#5E5CE6',
 
   // Mode clair
@@ -41,7 +42,7 @@ const C = {
   dShadowL:'rgba(255,255,255,0.03)',
 
   // Sémantique
-  pos: '#00C48C',
+ pos: '#00FF9F',
   neg: '#FF4757',
 };
 
@@ -62,6 +63,20 @@ function useTheme() {
     shadowD: isDark ? C.dShadowD: C.lShadowD,
     shadowL: isDark ? C.dShadowL: C.lShadowL,
   };
+}
+
+// ============================================
+// DÉCO FOND — cercles sur tous les écrans
+// ============================================
+function DecoBg() {
+  const t = useTheme();
+  return (
+    <>
+      <View style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: t.isDark ? 'rgba(26,111,212,0.06)' : 'rgba(26,111,212,0.05)' }} />
+      <View style={{ position: 'absolute', bottom: -80, left: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: t.isDark ? 'rgba(94,92,230,0.06)' : 'rgba(94,92,230,0.04)' }} />
+      <View style={{ position: 'absolute', top: '40%', left: -60, width: 150, height: 150, borderRadius: 75, backgroundColor: t.isDark ? 'rgba(26,111,212,0.04)' : 'rgba(26,111,212,0.03)' }} />
+    </>
+  );
 }
 
 // ============================================
@@ -150,11 +165,6 @@ function BtnOutline({ label, onPress }: { label: string, onPress?: () => void })
         alignItems: 'center',
         borderWidth: 1.5,
         borderColor: C.p1,
-        elevation: 3,
-        shadowColor: C.p1,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
         backgroundColor: 'transparent',
       }}
     >
@@ -162,7 +172,6 @@ function BtnOutline({ label, onPress }: { label: string, onPress?: () => void })
     </TouchableOpacity>
   );
 }
-
 function Tabs({ items, active, onChange, theme }: { items: {id:string,label:string}[], active: string, onChange: (s:string)=>void, theme: any }) {
   return (
     <View style={{
@@ -217,21 +226,17 @@ function Tabs({ items, active, onChange, theme }: { items: {id:string,label:stri
 function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => void }) {
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const lineAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       scale.setValue(0);
       opacity.setValue(0);
-      lineAnim.setValue(0);
-
       Animated.sequence([
         Animated.parallel([
           Animated.spring(scale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
           Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
         ]),
-        Animated.timing(lineAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
-        Animated.delay(1200),
+        Animated.delay(1500),
         Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
       ]).start(() => onFin());
     }
@@ -239,11 +244,11 @@ function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => vo
 
   if (!visible) return null;
 
-  // Longueur de la ligne animée
-  const lineWidth = lineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 44],
-  });
+  // Jouer le son de validation
+Sound.setCategory('Playback');
+const sound = new Sound('notification_compat.mp3', Sound.MAIN_BUNDLE, (error) => {
+    if (!error) sound.play();
+});
 
   return (
     <Animated.View style={{
@@ -251,32 +256,33 @@ function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => vo
       alignItems: 'center', justifyContent: 'center',
       opacity,
     }}>
-      {/* Fond flou semi-transparent */}
       <View style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.3)',
       }} />
-
-      <Animated.View style={{
-        width: 120, height: 120, borderRadius: 60,
-        borderWidth: 2,
-        borderColor: C.pos,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0,196,140,0.08)',
-        transform: [{ scale }],
-      }}>
-        {/* Ligne simple de validation */}
-        <Animated.View style={{
-          width: lineWidth,
-          height: 2,
-          backgroundColor: C.pos,
-          borderRadius: 1,
-          transform: [{ rotate: '-30deg' }],
-        }} />
-      </Animated.View>
-    </Animated.View>
-  );
+<Animated.View style={{
+  width: 140, height: 140, borderRadius: 70,
+  backgroundColor: 'rgba(0,196,140,0.15)',
+  alignItems: 'center', justifyContent: 'center',
+  transform: [{ scale }],
+}}>
+  <View style={{
+    width: 110, height: 110, borderRadius: 55,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: C.pos,
+    alignItems: 'center', justifyContent: 'center',
+  }}>
+    <Text style={{
+      color: C.pos,
+      fontSize: 50,
+      fontWeight: '200',
+      marginTop: -4,
+    }}>v</Text>
+  </View>
+</Animated.View>
+</Animated.View>
+);
 }
 
 // ============================================
@@ -449,20 +455,42 @@ function EcranPin({ onSuccess }: { onSuccess: () => void }) {
     ]).start();
   }
 
-  function appuyer(c: string) {
+async function appuyer(c: string) {
     if (pin.length >= 6) return;
     const p = pin + c;
     setPin(p);
     if (p.length === 6) {
-      setTimeout(() => {
-        if (p === '000000') onSuccess();
-        else { secouer(); setPin(''); }
+      setTimeout(async () => {
+        try {
+          const userStr = await AsyncStorage.getItem('user');
+          const user = userStr ? JSON.parse(userStr) : null;
+          
+          if (!user) {
+            // Pas d'utilisateur — PIN de test
+            if (p === '000000') onSuccess();
+            else { secouer(); setPin(''); }
+            return;
+          }
+
+          const result = await verifierPin(user.id, p);
+          if (result.succes) {
+            onSuccess();
+          } else {
+            secouer();
+            setPin('');
+          }
+        } catch (e) {
+          // Fallback PIN de test
+          if (p === '000000') onSuccess();
+          else { secouer(); setPin(''); }
+        }
       }, 300);
     }
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <DecoBg />
       <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
       {/* Déco fond */}
@@ -657,6 +685,7 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
         <LogoZevo size={18} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Transferts</Text>
@@ -722,6 +751,7 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
         <LogoZevo size={18} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Payer</Text>
@@ -802,6 +832,7 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
+      <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
         <LogoZevo size={18} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mes Wallets</Text>
@@ -850,6 +881,7 @@ function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
+      <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
         <LogoZevo size={18} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Profil</Text>
