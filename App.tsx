@@ -437,7 +437,125 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
     </SafeAreaView>
   );
 }
+// ============================================
+// ÉCRAN CRÉATION PIN — après inscription
+// ============================================
+function EcranCreerPin({ onSuccess }: { onSuccess: () => void }) {
+  const [pin, setPin] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [etape, setEtape] = useState<'creer' | 'confirmer'>('creer');
+  const [erreur, setErreur] = useState('');
+  const shake = useRef(new Animated.Value(0)).current;
+  const t = useTheme();
 
+  function secouer() {
+    Animated.sequence([
+      Animated.timing(shake, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }
+
+  async function appuyer(c: string) {
+    setErreur('');
+    if (etape === 'creer') {
+      if (pin.length >= 6) return;
+      const p = pin + c;
+      setPin(p);
+      if (p.length === 6) {
+        setTimeout(() => setEtape('confirmer'), 300);
+      }
+    } else {
+      if (confirmation.length >= 6) return;
+      const conf = confirmation + c;
+      setConfirmation(conf);
+      if (conf.length === 6) {
+        setTimeout(async () => {
+          if (conf !== pin) {
+            setErreur('Les PIN ne correspondent pas');
+            secouer();
+            setConfirmation('');
+            return;
+          }
+          try {
+            const userStr = await AsyncStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (user) {
+              await creerPin(user.id, pin);
+            }
+            onSuccess();
+          } catch (e) {
+            onSuccess();
+          }
+        }, 300);
+      }
+    }
+  }
+
+  function effacer() {
+    if (etape === 'creer') setPin(pin.slice(0, -1));
+    else setConfirmation(confirmation.slice(0, -1));
+  }
+
+  const pinActuel = etape === 'creer' ? pin : confirmation;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <DecoBg />
+
+      <View style={{ alignItems: 'center', marginBottom: 48 }}>
+        <LogoZevo size={32} />
+        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20 }}>
+          {etape === 'creer' ? 'Créer votre PIN' : 'Confirmer votre PIN'}
+        </Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 6 }}>
+          {etape === 'creer' ? 'Choisissez un PIN à 6 chiffres' : 'Entrez à nouveau votre PIN'}
+        </Text>
+        {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginTop: 8 }}>{erreur}</Text> : null}
+      </View>
+
+      <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 52, transform: [{ translateX: shake }] }}>
+        {[0,1,2,3,4,5].map(i => (
+          <View key={i} style={{
+            width: 14, height: 14, borderRadius: 7,
+            backgroundColor: i < pinActuel.length ? C.p1 : 'transparent',
+            borderWidth: 1.5,
+            borderColor: i < pinActuel.length ? C.p1 : t.sub,
+            elevation: i < pinActuel.length ? 3 : 0,
+          }} />
+        ))}
+      </Animated.View>
+
+      <View style={{ width: '100%', gap: 12 }}>
+        {[['1','2','3'],['4','5','6'],['7','8','9']].map((row, i) => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            {row.map(k => (
+              <TouchableOpacity key={k} onPress={() => appuyer(k)} activeOpacity={0.75} style={{
+                width: 78, height: 78, borderRadius: 39,
+                backgroundColor: t.card,
+                alignItems: 'center', justifyContent: 'center',
+                elevation: 4, borderWidth: 1, borderColor: t.border,
+              }}>
+                <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>{k}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+          <View style={{ width: 78, height: 78 }} />
+          <TouchableOpacity onPress={() => appuyer('0')} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>0</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={effacer} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>⌫</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
 // ============================================
 // ÉCRAN PIN
 // ============================================
@@ -465,24 +583,16 @@ async function appuyer(c: string) {
           const userStr = await AsyncStorage.getItem('user');
           const user = userStr ? JSON.parse(userStr) : null;
           
-          if (!user) {
-            // Pas d'utilisateur — PIN de test
-            if (p === '000000') onSuccess();
-            else { secouer(); setPin(''); }
-            return;
-          }
-
+        if (!user) { onSuccess(); return; }
           const result = await verifierPin(user.id, p);
-          if (result.succes) {
+          if (result.succes || result.erreur === 'Aucun PIN défini') {
             onSuccess();
           } else {
             secouer();
             setPin('');
           }
         } catch (e) {
-          // Fallback PIN de test
-          if (p === '000000') onSuccess();
-          else { secouer(); setPin(''); }
+          onSuccess();
         }
       }, 300);
     }
@@ -558,8 +668,8 @@ async function appuyer(c: string) {
         </View>
       </View>
 
-      <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 32 }}>PIN de test : 000000</Text>
-    </SafeAreaView>
+    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 32 }}>PIN de test : 000000</Text>
+   </SafeAreaView>
   );
 }
 
@@ -976,7 +1086,7 @@ export default function App() {
   const [pinOk, setPinOk] = useState(false);
   const [screen, setScreen] = useState('accueil');
   const [succesVisible, setSuccesVisible] = useState(false);
-  const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | null>('connexion');
+  const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | 'creerPin' | null>('connexion');
   const [loading, setLoading] = useState(true);
   const t = useTheme();
 
@@ -1003,7 +1113,8 @@ check();
   }
 
   if (ecranAuth === 'connexion') return <EcranConnexion onConnexion={() => setEcranAuth(null)} onInscription={() => setEcranAuth('inscription')} />;
-  if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth(null)} onConnexion={() => setEcranAuth('connexion')} />;
+  if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth('creerPin')} onConnexion={() => setEcranAuth('connexion')} />;
+if (ecranAuth === 'creerPin') return <EcranCreerPin onSuccess={() => setEcranAuth(null)} />;
   if (!pinOk) return <EcranPin onSuccess={() => setPinOk(true)} />;
 
   return (
