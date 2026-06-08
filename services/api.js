@@ -101,6 +101,34 @@ export const verifierPin = async (userId, pin) => {
         };
     }
 };
+// Récupérer les wallets
+export const getWallets = async (userId) => {
+    try {
+        const reponse = await api.get(`/wallets/${userId}`);
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 
-
+// Ajouter un wallet
+export const ajouterWallet = async (userId, nom, typeWallet, numero) => {
+    try {
+        const reponse = await api.post('/wallets/ajouter', {
+            user_id: userId,
+            nom,
+            type_wallet: typeWallet,
+            numero,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 export default api;

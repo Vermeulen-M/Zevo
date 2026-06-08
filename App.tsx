@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -149,7 +149,7 @@ function BtnPrimary({ label, onPress, loading }: { label: string, onPress: () =>
       }}
     >
       <Text style={{ color: '#fff', fontSize: F.md, fontWeight: '700', letterSpacing: 0.5 }}>
-        {loading ? 'Chargement...' : label}
+        {loading ? 'Connexion...' : label}
       </Text>
     </TouchableOpacity>
   );
@@ -346,8 +346,8 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
         <View style={{ alignItems: 'center', marginBottom: 36 }}>
           <LogoZevo size={32} />
-          <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>
-            PAIEMENTS SIMPLES POUR TOUS
+          <Text style={{ fontSize: F.xxl, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>
+            check et paies
           </Text>
         </View>
 
@@ -668,8 +668,8 @@ async function appuyer(c: string) {
         </View>
       </View>
 
-    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 32 }}>PIN de test : 000000</Text>
-   </SafeAreaView>
+    
+  </SafeAreaView>
   );
 }
 
@@ -701,8 +701,8 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
       {/* Header */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingTop: 28 }}>
         <View>
-          <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 3 }}>Bonjour 👋</Text>
-          <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mwamba K.</Text>
+         
+          <Text style={{ fontSize: F.xl, fontWeight: '600', color: t.text, letterSpacing: -0.5 }}>Mwamba K.</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <LogoZevo size={18} />
@@ -788,9 +788,9 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
   const t = useTheme();
 
   const tabItems = [
-    { id: 'tous', label: 'Tous' },
-    { id: 'envoye', label: 'Envoyé' },
-    { id: 'recu', label: 'Reçu' },
+    { id: 'tous', label: 'Tous ' },
+    { id: 'envoye', label: 'Envoyé ' },
+    { id: 'recu', label: 'Reçu ' },
   ];
 
   return (
@@ -908,7 +908,7 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
             <Text style={{ fontSize: 110 }}>▦</Text>
           </Card>
 
-          <Text style={{ fontSize: F.lg, fontWeight: '700', color: t.text, marginBottom: 4 }}>Mwamba Kalombo</Text>
+          <Text style={{ fontSize: F.lg, fontWeight: '600', color: t.text, marginBottom: 4 }}>Mwamba Kalombo</Text>
           <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 20 }}>+243 81 234 5678</Text>
 
           <Tabs items={walletItems} active={walletQR} onChange={setWalletQR} theme={t} />
@@ -932,45 +932,85 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
 // ============================================
 function EcranWallets({ isDark }: { isDark: boolean }) {
   const t = useTheme();
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [chargement, setChargement] = useState(true);
 
-  const wallets = [
-    { nom: 'Vodacom M-Pesa',  solde: '32 500', usd: '11,24', bg: '#0A5C3C', accent: 'rgba(255,255,255,0.15)' },
-    { nom: 'Airtel Money',    solde: '18 200', usd: '6,30',  bg: '#8B0000', accent: 'rgba(255,255,255,0.12)' },
-    { nom: 'Orange Money',    solde: '8 700',  usd: '3,01',  bg: '#7A4500', accent: 'rgba(255,255,255,0.12)' },
-    { nom: 'Rawbank · *4521', solde: '26 000', usd: '8,99',  bg: '#0A2A6E', accent: 'rgba(255,255,255,0.12)' },
-  ];
+  const couleurs: any = {
+    'mpesa':   { bg: '#0A5C3C', accent: 'rgba(255,255,255,0.15)' },
+    'airtel':  { bg: '#8B0000', accent: 'rgba(255,255,255,0.12)' },
+    'orange':  { bg: '#7A4500', accent: 'rgba(255,255,255,0.12)' },
+    'banque':  { bg: '#0A2A6E', accent: 'rgba(255,255,255,0.12)' },
+    'default': { bg: '#1A1A2E', accent: 'rgba(255,255,255,0.10)' },
+  };
+
+  useEffect(() => {
+    async function chargerWallets() {
+      try {
+        const userStr = await AsyncStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user) {
+          const result = await getWallets(user.id);
+          if (result.succes) {
+            setWallets(result.data.wallets);
+          }
+        }
+      } catch (e) {
+        console.log('Erreur chargement wallets:', e);
+      } finally {
+        setChargement(false);
+      }
+    }
+    chargerWallets();
+  }, []);
+
+  const getCouleur = (type: string) => couleurs[type] || couleurs['default'];
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
-      <DecoBg/>
+      <DecoBg />
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
         <LogoZevo size={18} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mes Wallets</Text>
       </View>
 
       <View style={{ padding: 16, gap: 14 }}>
-        {wallets.map(w => (
-          <TouchableOpacity key={w.nom} activeOpacity={0.85} style={{
-            borderRadius: 22, padding: 22, backgroundColor: w.bg, overflow: 'hidden',
-            shadowColor: w.bg, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
-          }}>
-            {/* Déco géométrique */}
-            <View style={{ position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: w.accent }} />
-            <View style={{ position: 'absolute', right: 20, bottom: -20, width: 70, height: 70, borderRadius: 35, backgroundColor: w.accent }} />
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.xs, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>
-                  {w.nom.toUpperCase()}
-                </Text>
-                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{w.solde}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, fontWeight: '300' }}>CDF</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: F.xs, marginTop: 6 }}>≈ {w.usd} USD</Text>
-              </View>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>›</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        {chargement ? (
+          <Text style={{ color: t.sub, textAlign: 'center', marginTop: 20 }}>Chargement...</Text>
+        ) : wallets.length === 0 ? (
+          <Text style={{ color: t.sub, textAlign: 'center', marginTop: 20 }}>
+            Aucun wallet — ajoutez-en un !
+          </Text>
+        ) : (
+          wallets.map(w => {
+            const c = getCouleur(w.type_wallet);
+            return (
+              <TouchableOpacity key={w.id} activeOpacity={0.85} style={{
+                borderRadius: 22, padding: 22, backgroundColor: c.bg, overflow: 'hidden',
+                shadowColor: c.bg, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
+              }}>
+                <View style={{ position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: c.accent }} />
+                <View style={{ position: 'absolute', right: 20, bottom: -20, width: 70, height: 70, borderRadius: 35, backgroundColor: c.accent }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.xs, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>
+                      {w.nom.toUpperCase()}
+                    </Text>
+                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
+                      {w.solde.toLocaleString()}
+                    </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, fontWeight: '300' }}>CDF</Text>
+                    {w.est_defaut && (
+                      <View style={{ marginTop: 8, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' }}>
+                        <Text style={{ color: '#fff', fontSize: F.xs }}>Défaut</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>›</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
 
         <BtnOutline label="+ Ajouter un wallet" onPress={() => {}} />
       </View>
