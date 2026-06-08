@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -678,6 +678,37 @@ async function appuyer(c: string) {
 // ============================================
 function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, onTransaction: () => void, onNaviguer: (s: string) => void }) {
   const t = useTheme();
+  const [solde, setSolde] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [chargement, setChargement] = useState(true);
+
+  useEffect(() => {
+    async function chargerDonnees() {
+      try {
+        const userStr = await AsyncStorage.getItem('user');
+        const userData = userStr ? JSON.parse(userStr) : null;
+        setUser(userData);
+
+        if (userData) {
+          const [soldeResult, txResult] = await Promise.all([
+            getSoldeTotal(userData.id),
+            getTransactions(userData.id, 3),
+          ]);
+
+          if (soldeResult.succes) setSolde(soldeResult.data.solde_total);
+          if (txResult.succes) setTransactions(txResult.data.transactions);
+        }
+      } catch (e) {
+        console.log('Erreur chargement accueil:', e);
+      } finally {
+        setChargement(false);
+      }
+    }
+    chargerDonnees();
+  }, []);
+
+  const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
 
   const actions = [
     { label: 'Envoyer',  icon: '↑', bg: '#E8F4FF', action: onTransaction },
@@ -686,48 +717,45 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
     { label: 'Wallets',  icon: '▤', bg: '#F5E8FF', action: () => onNaviguer('wallets') },
   ];
 
-  const txs = [
-    { nom: 'Jean Kabila',  date: "Aujourd'hui · M-Pesa", mt: '-5 000 CDF', ibg: '#FFE8E8', ic: '↑', pos: false },
-    { nom: 'Diaspora BE',  date: 'Hier · Virement',      mt: '+20 000 CDF', ibg: '#E8FFE8', ic: '↓', pos: true },
-    { nom: 'Shoprite KIN', date: '12 mai · Airtel',      mt: '-3 200 CDF', ibg: '#FFF8E8', ic: '⊡', pos: false },
-  ];
-
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
 
-      {/* Déco fond */}
       <View style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: t.isDark ? 'rgba(10,132,255,0.05)' : 'rgba(10,132,255,0.04)' }} />
 
       {/* Header */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingTop: 28 }}>
         <View>
-         
-          <Text style={{ fontSize: F.xl, fontWeight: '600', color: t.text, letterSpacing: -0.5 }}>Mwamba K.</Text>
+          <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>{prenomNom}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <LogoZevo size={18} />
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center', shadowColor: C.p1, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: F.sm }}>MK</Text>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: F.sm }}>
+              {user ? user.nom.charAt(0).toUpperCase() : 'Z'}
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Carte solde premium */}
+      {/* Carte solde */}
       <View style={{
         marginHorizontal: 16, borderRadius: 28, padding: 26,
         backgroundColor: C.p1, marginBottom: 8, overflow: 'hidden',
         shadowColor: C.p1, shadowOffset: { width: 0, height: 16 },
         shadowOpacity: 0.4, shadowRadius: 24, elevation: 12,
       }}>
-        {/* Décorations géométriques */}
         <View style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.08)' }} />
         <View style={{ position: 'absolute', right: 20, bottom: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)' }} />
         <View style={{ position: 'absolute', left: -20, bottom: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.04)' }} />
 
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginBottom: 8, letterSpacing: 0.5 }}>SOLDE TOTAL</Text>
-        <Text style={{ color: '#fff', fontSize: F.xxxl, fontWeight: '900', letterSpacing: -1.5 }}>85 400</Text>
+        <Text style={{ color: '#fff', fontSize: F.xxxl, fontWeight: '900', letterSpacing: -1.5 }}>
+          {chargement ? '...' : Number(solde).toLocaleString()}
+        </Text>
         <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: F.xl, fontWeight: '300', marginTop: -4 }}>CDF</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: F.sm, marginTop: 8 }}>≈ 29,50 USD</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: F.sm, marginTop: 8 }}>
+          ≈ {chargement ? '...' : (Number(solde) / 2890).toFixed(2)} USD
+        </Text>
       </View>
 
       {/* Actions */}
@@ -754,32 +782,48 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
       {/* Transactions */}
       <View style={{ paddingHorizontal: 16 }}>
         <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>RÉCENTES</Text>
-        <Card theme={t} style={{ padding: 0, gap: 0 }}>
-          {txs.map((tx, i) => (
-            <View key={tx.nom} style={{
-              flexDirection: 'row', alignItems: 'center',
-              paddingVertical: 14, paddingHorizontal: 16,
-              borderBottomWidth: i < txs.length - 1 ? 0.5 : 0,
-              borderBottomColor: t.border,
-            }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tx.ibg, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text style={{ fontSize: 14 }}>{tx.ic}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{tx.nom}</Text>
-                <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{tx.date}</Text>
-              </View>
-              <Text style={{ fontSize: F.md, fontWeight: '700', color: tx.pos ? C.pos : C.neg }}>{tx.mt}</Text>
-            </View>
-          ))}
-        </Card>
+        {chargement ? (
+          <Text style={{ color: t.sub, textAlign: 'center' }}>Chargement...</Text>
+        ) : transactions.length === 0 ? (
+          <Card theme={t} style={{ padding: 16 }}>
+            <Text style={{ color: t.sub, textAlign: 'center' }}>Aucune transaction pour le moment</Text>
+          </Card>
+        ) : (
+          <Card theme={t} style={{ padding: 0, gap: 0 }}>
+            {transactions.map((tx, i) => {
+              const userStr = user;
+              const estEnvoi = tx.expediteur_id === userStr?.id;
+              const nom = estEnvoi ? tx.nom_destinataire : tx.nom_expediteur;
+              return (
+                <View key={tx.id} style={{
+                  flexDirection: 'row', alignItems: 'center',
+                  paddingVertical: 14, paddingHorizontal: 16,
+                  borderBottomWidth: i < transactions.length - 1 ? 0.5 : 0,
+                  borderBottomColor: t.border,
+                }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: estEnvoi ? '#FFE8E8' : '#E8FFE8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 14 }}>{estEnvoi ? '↑' : '↓'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{nom || 'Inconnu'}</Text>
+                    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>
+                      {new Date(tx.created_at).toLocaleDateString('fr-FR')}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: F.md, fontWeight: '700', color: estEnvoi ? C.neg : C.pos }}>
+                    {estEnvoi ? '-' : '+'}{Number(tx.montant).toLocaleString()} CDF
+                  </Text>
+                </View>
+              );
+            })}
+          </Card>
+        )}
       </View>
 
       <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
-
 // ============================================
 // ÉCRAN TRANSFERTS
 // ============================================

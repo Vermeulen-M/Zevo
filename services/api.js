@@ -131,4 +131,29 @@ export const ajouterWallet = async (userId, nom, typeWallet, numero) => {
         };
     }
 };
+// Récupérer les transactions
+export const getTransactions = async (userId, limit = 10) => {
+    try {
+        const reponse = await api.get(`/transactions/${userId}?limit=${limit}`);
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
+
+// Récupérer le solde total
+export const getSoldeTotal = async (userId) => {
+    try {
+        const reponse = await api.get(`/transactions/solde/${userId}`);
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 export default api;
