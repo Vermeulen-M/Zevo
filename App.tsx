@@ -1066,6 +1066,18 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 // ÉCRAN PROFIL
 // ============================================
 function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
+const [user, setUser] = useState<any>(null);
+
+useEffect(() => {
+  async function chargerUser() {
+    const userStr = await AsyncStorage.getItem('user');
+    if (userStr) setUser(JSON.parse(userStr));
+  }
+  chargerUser();
+}, []);
+
+const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
+
   const t = useTheme();
 
   const options = [
@@ -1089,9 +1101,9 @@ function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion
           marginBottom: 14, shadowColor: C.p1,
           shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
         }}>
-          <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>MK</Text>
+        <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>{user ? user.nom.charAt(0).toUpperCase() : 'Z'}</Text>
         </View>
-        <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text, letterSpacing: -0.3 }}>Mwamba Kalombo</Text>
+    <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text, letterSpacing: -0.3 }}>{prenomNom}</Text>
         <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, marginBottom: 14 }}>+243 81 234 5678</Text>
         <View style={{ backgroundColor: '#E8FFF5', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
           <Text style={{ color: '#085041', fontSize: F.xs, fontWeight: '700' }}>KYC Vérifié ✓</Text>
