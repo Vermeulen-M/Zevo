@@ -156,4 +156,22 @@ export const getSoldeTotal = async (userId) => {
         };
     }
 };
+// Vérifier wallet via STK Push
+export const verifierWalletMpesa = async (userId, telephone, nom, typeWallet, numero) => {
+    try {
+        const reponse = await api.post('/mpesa/verifier-wallet', {
+            user_id: userId,
+            telephone,
+            nom,
+            type_wallet: typeWallet,
+            numero,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 export default api;

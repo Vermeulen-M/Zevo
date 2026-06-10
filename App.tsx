@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -972,9 +972,172 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
 }
 
 // ============================================
+// ÉCRAN AJOUTER WALLET
+// ============================================
+// ============================================
+// ÉCRAN AJOUTER WALLET
+// ============================================
+function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
+  const t = useTheme();
+  const [typeWallet, setTypeWallet] = useState('');
+  const [nom, setNom] = useState('');
+  const [numero, setNumero] = useState('');
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [etape, setEtape] = useState<'formulaire' | 'verification'>('formulaire');
+  const [countdown, setCountdown] = useState(120);
+
+  useEffect(() => {
+    if (etape === 'verification') {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setEtape('formulaire');
+            setErreur('Délai dépassé — réessayez');
+            return 120;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [etape]);
+
+  const types = [
+    { id: 'mpesa',  label: 'Vodacom M-Pesa',  bg: '#0A5C3C' },
+    { id: 'airtel', label: 'Airtel Money',     bg: '#8B0000' },
+    { id: 'orange', label: 'Orange Money',     bg: '#7A4500' },
+    { id: 'banque', label: 'Compte bancaire',  bg: '#0A2A6E' },
+  ];
+
+  if (etape === 'verification') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <DecoBg />
+        <LogoZevo size={32} />
+        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 24, textAlign: 'center' }}>
+          Confirmez sur votre téléphone
+        </Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 8, textAlign: 'center' }}>
+          Une notification M-Pesa a été envoyée sur {numero}
+        </Text>
+        <View style={{
+          width: 120, height: 120, borderRadius: 60,
+          borderWidth: 2, borderColor: countdown > 30 ? C.p1 : C.neg,
+          alignItems: 'center', justifyContent: 'center',
+          marginTop: 40,
+        }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: countdown > 30 ? C.p1 : C.neg }}>
+            {countdown}
+          </Text>
+          <Text style={{ fontSize: F.xs, color: t.sub }}>secondes</Text>
+        </View>
+        <Text style={{ color: t.sub, fontSize: F.xs, marginTop: 32, textAlign: 'center' }}>
+          1 CDF sera débité pour vérification
+        </Text>
+        <TouchableOpacity onPress={() => { setEtape('formulaire'); setCountdown(120); }} style={{ marginTop: 24 }}>
+          <Text style={{ color: C.neg, fontSize: F.sm }}>Annuler</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <DecoBg />
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+        <TouchableOpacity onPress={onRetour} style={{ marginRight: 16 }}>
+          <Text style={{ color: C.p1, fontSize: F.lg }}>←</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text }}>Ajouter un wallet</Text>
+      </View>
+      <ScrollView style={{ padding: 16 }}>
+        <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>TYPE DE WALLET</Text>
+        <View style={{ gap: 10, marginBottom: 24 }}>
+          {types.map(type => (
+            <TouchableOpacity
+              key={type.id}
+              onPress={() => { setTypeWallet(type.id); setNom(type.label); }}
+              activeOpacity={0.85}
+              style={{
+                borderRadius: 16, padding: 16,
+                backgroundColor: typeWallet === type.id ? type.bg : t.card,
+                borderWidth: 1.5,
+                borderColor: typeWallet === type.id ? type.bg : t.border,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                elevation: typeWallet === type.id ? 6 : 2,
+              }}
+            >
+              <Text style={{ fontSize: F.md, fontWeight: '600', color: typeWallet === type.id ? '#fff' : t.text }}>
+                {type.label}
+              </Text>
+              {typeWallet === type.id && <Text style={{ color: '#fff', fontSize: 18 }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+        {typeWallet !== '' && (
+          <>
+            <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>NUMÉRO</Text>
+            <InputField
+              label={typeWallet === 'banque' ? 'Numéro de compte' : 'Numéro de téléphone'}
+              placeholder={typeWallet === 'banque' ? 'CD00 0000 0000 0000' : '+243 8X XXX XXXX'}
+              value={numero}
+              onChange={setNumero}
+              keyType={typeWallet === 'banque' ? 'default' : 'phone-pad'}
+              theme={t}
+            />
+            <View style={{ marginTop: 16 }}>
+              {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginBottom: 12, textAlign: 'center' }}>{erreur}</Text> : null}
+              <BtnPrimary
+                label="Vérifier et ajouter"
+                loading={chargement}
+                onPress={async () => {
+                  if (!typeWallet || !numero) {
+                    setErreur('Veuillez choisir un type et entrer un numéro');
+                    return;
+                  }
+                  setChargement(true);
+                  setErreur('');
+                  try {
+                    const userStr = await AsyncStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : null;
+                    if (user) {
+                      if (typeWallet !== 'banque') {
+                        const result = await verifierWalletMpesa(user.id, numero, nom, typeWallet, numero);
+                        if (result.succes) {
+                          setEtape('verification');
+                          setCountdown(120);
+                        } else {
+                          setErreur(result.erreur);
+                        }
+                      } else {
+                        const result = await ajouterWallet(user.id, nom, typeWallet, numero);
+                        if (result.succes) onRetour();
+                        else setErreur(result.erreur);
+                      }
+                    }
+                  } catch (e) {
+                    setErreur('Erreur lors de la vérification');
+                  } finally {
+                    setChargement(false);
+                  }
+                }}
+              />
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// ============================================
 // ÉCRAN WALLETS
 // ============================================
 function EcranWallets({ isDark }: { isDark: boolean }) {
+  const [afficherAjouter, setAfficherAjouter] = useState(false);
   const t = useTheme();
   const [wallets, setWallets] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -1008,6 +1171,10 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
   }, []);
 
   const getCouleur = (type: string) => couleurs[type] || couleurs['default'];
+
+  if (afficherAjouter) {
+    return <EcranAjouterWallet onRetour={() => setAfficherAjouter(false)} />;
+  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
@@ -1055,13 +1222,11 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
             );
           })
         )}
-
-        <BtnOutline label="+ Ajouter un wallet" onPress={() => {}} />
+        <BtnOutline label="+ Ajouter un wallet" onPress={() => setAfficherAjouter(true)} />
       </View>
     </ScrollView>
   );
 }
-
 // ============================================
 // ÉCRAN PROFIL
 // ============================================
