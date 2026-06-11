@@ -825,6 +825,194 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
   );
 }
 // ============================================
+// ÉCRAN ENVOYER
+// ============================================
+function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
+  const t = useTheme();
+  const [montant, setMontant] = useState('');
+  const [destinataire, setDestinataire] = useState('');
+  const [walletSource, setWalletSource] = useState<any>(null);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [etape, setEtape] = useState<'formulaire' | 'confirmation' | 'succes'>('formulaire');
+  const [countdown, setCountdown] = useState(120);
+
+  useEffect(() => {
+    async function chargerWallets() {
+      const userStr = await AsyncStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      if (user) {
+        const result = await getWallets(user.id);
+        if (result.succes) setWallets(result.data.wallets);
+      }
+    }
+    chargerWallets();
+  }, []);
+
+  useEffect(() => {
+    if (etape === 'confirmation') {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setEtape('formulaire');
+            setErreur('Délai dépassé — réessayez');
+            return 120;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [etape]);
+
+  if (etape === 'confirmation') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <DecoBg />
+        <LogoZevo size={32} />
+        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 24, textAlign: 'center' }}>
+          Confirmez le paiement
+        </Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 8, textAlign: 'center' }}>
+          Une notification M-Pesa a été envoyée sur votre téléphone
+        </Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, textAlign: 'center' }}>
+          Entrez votre PIN M-Pesa pour confirmer
+        </Text>
+        <Card theme={t} style={{ width: '100%', marginTop: 24, alignItems: 'center' }}>
+          <Text style={{ fontSize: F.xs, color: t.sub }}>MONTANT</Text>
+          <Text style={{ fontSize: F.xxxl, fontWeight: '900', color: t.text }}>{montant}</Text>
+          <Text style={{ fontSize: F.sm, color: t.sub }}>CDF → {destinataire}</Text>
+        </Card>
+        <View style={{
+          width: 120, height: 120, borderRadius: 60,
+          borderWidth: 2, borderColor: countdown > 30 ? C.p1 : C.neg,
+          alignItems: 'center', justifyContent: 'center', marginTop: 32,
+        }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: countdown > 30 ? C.p1 : C.neg }}>{countdown}</Text>
+          <Text style={{ fontSize: F.xs, color: t.sub }}>secondes</Text>
+        </View>
+        <TouchableOpacity onPress={() => { setEtape('formulaire'); setCountdown(120); }} style={{ marginTop: 24 }}>
+          <Text style={{ color: C.neg, fontSize: F.sm }}>Annuler</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+      <DecoBg />
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+        <TouchableOpacity onPress={onRetour} style={{ marginRight: 16 }}>
+          <Text style={{ color: C.p1, fontSize: F.lg }}>←</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text }}>Envoyer de l'argent</Text>
+      </View>
+
+      <ScrollView style={{ padding: 16 }}>
+        {/* Montant */}
+        <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>MONTANT</Text>
+        <InputField
+          label="Montant en CDF"
+          placeholder="Ex: 5000"
+          value={montant}
+          onChange={setMontant}
+          keyType="numeric"
+          theme={t}
+        />
+
+        {/* Destinataire */}
+        <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 12 }}>DESTINATAIRE</Text>
+        <InputField
+          label="Numéro de téléphone"
+          placeholder="+243 8X XXX XXXX"
+          value={destinataire}
+          onChange={setDestinataire}
+          keyType="phone-pad"
+          theme={t}
+        />
+
+        {/* Wallet source */}
+        {wallets.length > 0 && (
+          <>
+            <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 12 }}>PAYER DEPUIS</Text>
+            <View style={{ gap: 10 }}>
+              {wallets.map(w => (
+                <TouchableOpacity
+                  key={w.id}
+                  onPress={() => setWalletSource(w)}
+                  activeOpacity={0.85}
+                  style={{
+                    borderRadius: 16, padding: 16,
+                    backgroundColor: walletSource?.id === w.id ? '#0A5C3C' : t.card,
+                    borderWidth: 1.5,
+                    borderColor: walletSource?.id === w.id ? '#0A5C3C' : t.border,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    elevation: walletSource?.id === w.id ? 6 : 2,
+                  }}
+                >
+                  <View>
+                    <Text style={{ fontSize: F.md, fontWeight: '600', color: walletSource?.id === w.id ? '#fff' : t.text }}>{w.nom}</Text>
+                    <Text style={{ fontSize: F.xs, color: walletSource?.id === w.id ? 'rgba(255,255,255,0.7)' : t.sub }}>Solde: {w.solde} CDF</Text>
+                  </View>
+                  {walletSource?.id === w.id && <Text style={{ color: '#fff', fontSize: 18 }}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {wallets.length === 0 && (
+          <Card theme={t} style={{ marginTop: 16 }}>
+            <Text style={{ color: t.sub, textAlign: 'center' }}>Aucun wallet — ajoutez-en un d'abord !</Text>
+          </Card>
+        )}
+
+        <View style={{ marginTop: 24, marginBottom: 40 }}>
+          {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginBottom: 12, textAlign: 'center' }}>{erreur}</Text> : null}
+          <BtnPrimary
+            label="Envoyer"
+            loading={chargement}
+            onPress={async () => {
+              if (!montant || !destinataire || !walletSource) {
+                setErreur('Veuillez remplir tous les champs');
+                return;
+              }
+              setChargement(true);
+              setErreur('');
+              try {
+                const reponse = await fetch(`http://${await AsyncStorage.getItem('serverIP') || '172.16.54.218'}:3000/mpesa/stkpush`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    telephone: destinataire,
+                    montant: Number(montant),
+                    reference: 'Zevo Transfer',
+                  }),
+                });
+                const data = await reponse.json();
+                if (data.succes) {
+                  setEtape('confirmation');
+                  setCountdown(120);
+                } else {
+                  setErreur(data.erreur || 'Erreur M-Pesa');
+                }
+              } catch (e) {
+                setErreur('Erreur de connexion au serveur');
+              } finally {
+                setChargement(false);
+              }
+            }}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+// ============================================
 // ÉCRAN TRANSFERTS
 // ============================================
 function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
@@ -1345,24 +1533,25 @@ function Navbar({ active, onChange, isDark }: { active: string, onChange: (s: st
 // ============================================
 export default function App() {
   const [pinOk, setPinOk] = useState(false);
+  const [afficherEnvoyer, setAfficherEnvoyer] = useState(false);
   const [screen, setScreen] = useState('accueil');
-  const [succesVisible, setSuccesVisible] = useState(false);
+  const [succesVisible, setSuccesVisible] = useState(false); 
   const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | 'creerPin' | null>('connexion');
   const [loading, setLoading] = useState(true);
   const t = useTheme();
 
   useEffect(() => {
-async function check() {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    if (token) setEcranAuth(null);
-  } catch (e) {
-    console.log('AsyncStorage error:', e);
-  } finally {
-    setLoading(false);
-  }
-}
-check();
+    async function check() {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) setEcranAuth(null);
+      } catch (e) {
+        console.log('AsyncStorage error:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    check();
   }, []);
 
   if (loading) {
@@ -1375,15 +1564,17 @@ check();
 
   if (ecranAuth === 'connexion') return <EcranConnexion onConnexion={() => setEcranAuth(null)} onInscription={() => setEcranAuth('inscription')} />;
   if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth('creerPin')} onConnexion={() => setEcranAuth('connexion')} />;
-if (ecranAuth === 'creerPin') return <EcranCreerPin onSuccess={() => setEcranAuth(null)} />;
+  if (ecranAuth === 'creerPin') return <EcranCreerPin onSuccess={() => setEcranAuth(null)} />;
   if (!pinOk) return <EcranPin onSuccess={() => setPinOk(true)} />;
+
+  if (afficherEnvoyer) return <EcranEnvoyer onRetour={() => setAfficherEnvoyer(false)} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
-      {screen === 'accueil'    && <EcranAccueil    isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} onNaviguer={setScreen} />}
-      {screen === 'transferts' && <EcranTransferts isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} />}
+      {screen === 'accueil'    && <EcranAccueil    isDark={t.isDark} onTransaction={() => setAfficherEnvoyer(true)} onNaviguer={setScreen} />}
+      {screen === 'transferts' && <EcranTransferts isDark={t.isDark} onTransaction={() => setAfficherEnvoyer(true)} />}
       {screen === 'payer'      && <EcranPayer      isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} />}
       {screen === 'wallets'    && <EcranWallets    isDark={t.isDark} />}
       {screen === 'profil'     && <EcranProfil     isDark={t.isDark} onDeconnexion={async () => {
