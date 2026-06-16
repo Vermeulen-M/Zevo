@@ -174,4 +174,39 @@ export const verifierWalletMpesa = async (userId, telephone, nom, typeWallet, nu
         };
     }
 };
+// Paiement Mobile Money via Flutterwave
+export const payerMobileMoney = async (telephone, montant, reseau, reference) => {
+    try {
+        const reponse = await api.post('/flutterwave/mobile-money', {
+            telephone,
+            montant,
+            reseau,
+            reference,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
+
+// Transfert via Flutterwave
+export const transfererFlutterwave = async (telephone, montant, reseau, reference) => {
+    try {
+        const reponse = await api.post('/flutterwave/transfert', {
+            telephone,
+            montant,
+            reseau,
+            reference,
+        });
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 export default api;

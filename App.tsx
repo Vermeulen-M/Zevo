@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -984,21 +984,18 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
               setChargement(true);
               setErreur('');
               try {
-                const reponse = await fetch(`http://${await AsyncStorage.getItem('serverIP') || '172.16.54.218'}:3000/mpesa/stkpush`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    telephone: destinataire,
-                    montant: Number(montant),
-                    reference: 'Zevo Transfer',
-                  }),
-                });
-                const data = await reponse.json();
-                if (data.succes) {
+               const reseau = walletSource.type_wallet === 'orange' ? 'ORANGE' : 'MTN';
+                const result = await payerMobileMoney(
+                  destinataire,
+                  Number(montant),
+                  reseau,
+                  `ZEVO-${Date.now()}`
+                );
+                if (result.succes) {
                   setEtape('confirmation');
                   setCountdown(120);
                 } else {
-                  setErreur(data.erreur || 'Erreur M-Pesa');
+                  setErreur(result.erreur || 'Erreur de paiement');
                 }
               } catch (e) {
                 setErreur('Erreur de connexion au serveur');
