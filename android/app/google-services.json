@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "877454845778",
+    "project_id": "zevo-1df8f",
+    "storage_bucket": "zevo-1df8f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:877454845778:android:d4d42581e80ade08e2bc8b",
+        "android_client_info": {
+         "package_name": "com.apppay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsKE1Vk5SPJDoOkn5eQYIxygL9vgehhcU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

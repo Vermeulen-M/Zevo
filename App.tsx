@@ -2,7 +2,7 @@
 // ZEVO — App.tsx v6
 // Design Premium — Neumorphisme + Son
 // ============================================
-
+import messaging from '@react-native-firebase/messaging';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave } from './services/api';
@@ -1549,6 +1549,17 @@ export default function App() {
       }
     }
     check();
+    // Demander permission notifications
+async function setupNotifications() {
+  const authStatus = await messaging().requestPermission();
+  const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED;
+  if (enabled) {
+    const token = await messaging().getToken();
+    console.log('FCM Token:', token);
+    await AsyncStorage.setItem('fcmToken', token);
+  }
+}
+setupNotifications();
   }, []);
 
   if (loading) {
