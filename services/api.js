@@ -56,11 +56,12 @@ export const inscription = async (nom, email, telephone, motDePasse) => {
 };
 
 // Connexion — se connecter avec email/téléphone + mot de passe
-export const connexion = async (identifiant, motDePasse) => {
+export const connexion = async (identifiant, motDePasse, fcmToken = '') => {
     try {
         const reponse = await api.post('/auth/connexion', {
             identifiant,
             mot_de_passe: motDePasse,
+            fcm_token: fcmToken,
         });
         return { succes: true, data: reponse.data };
     } catch (erreur) {

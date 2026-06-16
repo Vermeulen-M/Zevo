@@ -2,6 +2,7 @@
 // ZEVO — App.tsx v6
 // Design Premium — Neumorphisme + Son
 // ============================================
+import QRCode from 'react-native-qrcode-svg';
 import messaging from '@react-native-firebase/messaging';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -362,7 +363,8 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
 
           <BtnPrimary label="Se connecter" loading={load} onPress={async () => {
             setLoad(true); setErr('');
-            const r = await apiConnexion(id, mdp);
+            const fcmToken = await AsyncStorage.getItem('fcmToken') || '';
+const r = await apiConnexion(id, mdp, fcmToken);
             setLoad(false);
             if (r.succes) {
               await AsyncStorage.setItem('token', r.data.token);
@@ -1072,6 +1074,16 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
 // ÉCRAN PAYER
 // ============================================
 function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
+  const [user, setUser] = useState<any>(null);
+  const [wallets, setWallets] = useState<any[]>([]);
+
+useEffect(() => {
+  async function chargerUser() {
+    const userStr = await AsyncStorage.getItem('user');
+    if (userStr) setUser(JSON.parse(userStr));
+  }
+  chargerUser();
+}, []);
   const [tab, setTab] = useState('payer');
   const [walletQR, setWalletQR] = useState('mpesa');
   const t = useTheme();
@@ -1080,13 +1092,9 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
     { id: 'payer', label: 'Payer' },
     { id: 'monqr', label: 'Mon QR' },
   ];
-
-  const walletItems = [
-    { id: 'mpesa', label: 'M-Pesa' },
-    { id: 'airtel', label: 'Airtel' },
-    { id: 'orange', label: 'Orange' },
-    { id: 'autre', label: 'Autre' },
-  ];
+const walletItems = wallets.length > 0 
+    ? wallets.map(w => ({ id: w.type_wallet, label: w.nom }))
+    : [{ id: 'default', label: 'Mon wallet' }];
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -1134,7 +1142,12 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
       {tab === 'monqr' && (
         <ScrollView contentContainerStyle={{ alignItems: 'center', padding: 24 }}>
           <Card theme={t} style={{ width: 190, height: 190, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-            <Text style={{ fontSize: 110 }}>▦</Text>
+           <QRCode
+  value={user ? JSON.stringify({ id: user.id, nom: user.nom, telephone: user.telephone }) : 'zevo'}
+  size={160}
+  color={C.p1}
+  backgroundColor="transparent"
+/>
           </Card>
 
           <Text style={{ fontSize: F.lg, fontWeight: '600', color: t.text, marginBottom: 4 }}>Mwamba Kalombo</Text>
@@ -1417,7 +1430,7 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 // ============================================
 function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
 const [user, setUser] = useState<any>(null);
-
+const [wallets, setWallets] = useState<any[]>([]);
 useEffect(() => {
   async function chargerUser() {
     const userStr = await AsyncStorage.getItem('user');
