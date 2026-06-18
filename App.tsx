@@ -6,7 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 import messaging from '@react-native-firebase/messaging';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -830,6 +830,8 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
 // ÉCRAN ENVOYER
 // ============================================
 function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
+  const [destinataireInfo, setDestinataireInfo] = useState<any>(null);
+  const [recherche, setRecherche] = useState(false);
   const t = useTheme();
   const [montant, setMontant] = useState('');
   const [destinataire, setDestinataire] = useState('');
@@ -926,16 +928,41 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
           theme={t}
         />
 
-        {/* Destinataire */}
+   {/* Destinataire */}
         <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 12 }}>DESTINATAIRE</Text>
         <InputField
           label="Numéro de téléphone"
           placeholder="+243 8X XXX XXXX"
           value={destinataire}
-          onChange={setDestinataire}
+          onChange={async (val: string) => {
+            setDestinataire(val);
+            setDestinataireInfo(null);
+            if (val.length >= 9) {
+              setRecherche(true);
+              const result = await chercherUtilisateur(val);
+              setRecherche(false);
+              if (result.succes && result.data.trouve) {
+                setDestinataireInfo(result.data.user);
+              }
+            }
+          }}
           keyType="phone-pad"
           theme={t}
         />
+        {recherche && (
+          <Text style={{ color: t.sub, fontSize: F.xs, marginTop: 8 }}>Recherche...</Text>
+        )}
+        {destinataireInfo && (
+          <Card theme={t} style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', padding: 12 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: '800' }}>{destinataireInfo.nom.charAt(0).toUpperCase()}</Text>
+            </View>
+            <View>
+              <Text style={{ color: t.text, fontWeight: '600' }}>{destinataireInfo.nom}</Text>
+              <Text style={{ color: t.sub, fontSize: F.xs }}>Utilisateur Zevo vérifié ✓</Text>
+            </View>
+          </Card>
+        )}
 
         {/* Wallet source */}
         {wallets.length > 0 && (

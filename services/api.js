@@ -210,4 +210,16 @@ export const transfererFlutterwave = async (telephone, montant, reseau, referenc
         };
     }
 };
+// Rechercher un utilisateur par téléphone
+export const chercherUtilisateur = async (telephone) => {
+    try {
+        const reponse = await api.get(`/auth/chercher/${telephone}`);
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
 export default api;
