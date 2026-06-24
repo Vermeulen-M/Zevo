@@ -8,7 +8,7 @@ import axios from 'axios';
 // URL de base du serveur backend
 // En développement = ton PC local
 // En production = ton serveur cloud
-const BASE_URL = 'http://172.16.54.218:3000';
+const BASE_URL = 'http://10.41.27.218:3000';
 // Note : 10.0.2.2 = adresse spéciale qui pointe vers
 // ton PC depuis l'émulateur Android (localhost ne fonctionne pas)
 
@@ -48,9 +48,9 @@ export const inscription = async (nom, email, telephone, motDePasse) => {
         });
         return { succes: true, data: reponse.data };
     } catch (erreur) {
-        return {
+return {
             succes: false,
-            erreur: erreur.response?.data?.erreur || 'Erreur de connexion au serveur',
+            erreur: erreur.message + ' | ' + JSON.stringify(erreur.response?.data || 'pas de réponse'),
         };
     }
 };

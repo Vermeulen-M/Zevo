@@ -3,6 +3,7 @@
 // Design Premium — Neumorphisme + Son
 // ============================================
 import QRCode from 'react-native-qrcode-svg';
+import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -393,6 +394,9 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [tel, setTel] = useState('');
+  const [countryCode, setCountryCode] = useState<any>('CI');
+  const [callingCode, setCallingCode] = useState('225');
+  const [afficherPays, setAfficherPays] = useState(false);
   const [mdp, setMdp] = useState('');
   const [load, setLoad] = useState(false);
   const [err, setErr] = useState('');
@@ -412,7 +416,32 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
           <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 4 }}>Inscription</Text>
           <InputField label="Nom complet" placeholder="Jean Kabila" value={nom} onChange={setNom} theme={t} />
           <InputField label="Email" placeholder="email@exemple.com" value={email} onChange={setEmail} keyType="email-address" theme={t} />
-          <InputField label="Téléphone" placeholder="+243 8X XXX XXXX" value={tel} onChange={setTel} keyType="phone-pad" theme={t} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+  <TouchableOpacity
+    onPress={() => setAfficherPays(true)}
+    style={{
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: t.card, borderWidth: 1, borderColor: t.border,
+      borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+      marginRight: 8,
+    }}
+  >
+    <CountryPicker
+      countryCode={countryCode}
+      withFlag
+      withCallingCode
+      withEmoji
+      onSelect={(country) => {
+        setCountryCode(country.cca2);
+        setCallingCode(country.callingCode[0]);
+      }}
+      visible={afficherPays}
+      onClose={() => setAfficherPays(false)}
+    />
+    <Text style={{ color: t.text, fontWeight: '600', marginLeft: 4 }}>+{callingCode}</Text>
+  </TouchableOpacity>
+</View>
+<InputField label="Téléphone" placeholder="Ex: 0102030405" value={tel} onChange={setTel} keyType="phone-pad" theme={t} />
           <InputField label="Mot de passe" placeholder="••••••••" value={mdp} onChange={setMdp} secure theme={t} />
 
           {err ? <Text style={{ color: C.neg, fontSize: F.xs, textAlign: 'center' }}>{err}</Text> : null}
@@ -667,11 +696,23 @@ async function appuyer(c: string) {
           <TouchableOpacity onPress={() => setPin(pin.slice(0,-1))} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', shadowColor: t.shadowD, shadowOffset: { width: 3, height: 3 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: t.border }}>
             <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>⌫</Text>
           </TouchableOpacity>
-        </View>
+</View>
       </View>
 
-    
-  </SafeAreaView>
+      <TouchableOpacity
+        onPress={async () => {
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('user');
+          onSuccess();
+        }}
+        style={{ marginTop: 32 }}
+      >
+        <Text style={{ color: C.p1, fontSize: F.sm, fontWeight: '600' }}>
+          Retour à la connexion
+        </Text>
+      </TouchableOpacity>
+
+    </SafeAreaView>
   );
 }
 
@@ -830,7 +871,8 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
 // ÉCRAN ENVOYER
 // ============================================
 function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
-  const [destinataireInfo, setDestinataireInfo] = useState<any>(null);
+ const [countryCode, setCountryCode] = useState<any>('CI'); const [afficherPays, setAfficherPays] = useState(false); 
+ const [callingCode, setCallingCode] = useState('225');  const [destinataireInfo, setDestinataireInfo] = useState<any>(null);
   const [recherche, setRecherche] = useState(false);
   const t = useTheme();
   const [montant, setMontant] = useState('');
@@ -930,9 +972,34 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
 
    {/* Destinataire */}
         <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 12 }}>DESTINATAIRE</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+  <TouchableOpacity
+    onPress={() => setAfficherPays(true)}
+    style={{
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: t.card, borderWidth: 1, borderColor: t.border,
+      borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+      marginRight: 8,
+    }}
+  >
+    <CountryPicker
+      countryCode={countryCode}
+      withFlag
+      withCallingCode
+      withEmoji
+      onSelect={(country) => {
+        setCountryCode(country.cca2);
+        setCallingCode(country.callingCode[0]);
+      }}
+      visible={afficherPays}
+      onClose={() => setAfficherPays(false)}
+    />
+    <Text style={{ color: t.text, fontWeight: '600', marginLeft: 4 }}>+{callingCode}</Text>
+  </TouchableOpacity>
+</View>
         <InputField
           label="Numéro de téléphone"
-          placeholder="+243 8X XXX XXXX"
+       placeholder="Numéro sans le code pays"
           value={destinataire}
           onChange={async (val: string) => {
             setDestinataire(val);
@@ -1199,14 +1266,14 @@ const walletItems = wallets.length > 0
 // ============================================
 // ÉCRAN AJOUTER WALLET
 // ============================================
-// ============================================
-// ÉCRAN AJOUTER WALLET
-// ============================================
 function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
   const t = useTheme();
   const [typeWallet, setTypeWallet] = useState('');
   const [nom, setNom] = useState('');
   const [numero, setNumero] = useState('');
+  const [countryCode, setCountryCode] = useState<any>('CI');
+const [callingCode, setCallingCode] = useState('225');
+const [afficherPays, setAfficherPays] = useState(false);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState('');
   const [etape, setEtape] = useState<'formulaire' | 'verification'>('formulaire');
@@ -1228,11 +1295,11 @@ function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
       return () => clearInterval(timer);
     }
   }, [etape]);
-
-  const types = [
-    { id: 'mpesa',  label: 'Vodacom M-Pesa',  bg: '#0A5C3C' },
-    { id: 'airtel', label: 'Airtel Money',     bg: '#8B0000' },
-    { id: 'orange', label: 'Orange Money',     bg: '#7A4500' },
+const types = [
+    { id: 'orange', label: 'Orange Money CI', bg: '#FF6600' },
+    { id: 'mtn',    label: 'MTN MoMo CI',      bg: '#FFCC00' },
+    { id: 'moov',   label: 'Moov Money CI',    bg: '#0066B3' },
+    { id: 'mpesa',  label: 'M-Pesa (bientôt disponible)', bg: '#0A5C3C' },
     { id: 'banque', label: 'Compte bancaire',  bg: '#0A2A6E' },
   ];
 
@@ -1281,10 +1348,15 @@ function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
       <ScrollView style={{ padding: 16 }}>
         <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>TYPE DE WALLET</Text>
         <View style={{ gap: 10, marginBottom: 24 }}>
-          {types.map(type => (
+       {types.map(type => (
             <TouchableOpacity
               key={type.id}
-              onPress={() => { setTypeWallet(type.id); setNom(type.label); }}
+              disabled={type.id === 'mpesa'}
+              onPress={() => { 
+                if (type.id === 'mpesa') return;
+                setTypeWallet(type.id); 
+                setNom(type.label); 
+              }}
               activeOpacity={0.85}
               style={{
                 borderRadius: 16, padding: 16,
@@ -1293,6 +1365,7 @@ function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
                 borderColor: typeWallet === type.id ? type.bg : t.border,
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                 elevation: typeWallet === type.id ? 6 : 2,
+                opacity: type.id === 'mpesa' ? 0.4 : 1,
               }}
             >
               <Text style={{ fontSize: F.md, fontWeight: '600', color: typeWallet === type.id ? '#fff' : t.text }}>
@@ -1305,14 +1378,43 @@ function EcranAjouterWallet({ onRetour }: { onRetour: () => void }) {
         {typeWallet !== '' && (
           <>
             <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginBottom: 12 }}>NUMÉRO</Text>
-            <InputField
-              label={typeWallet === 'banque' ? 'Numéro de compte' : 'Numéro de téléphone'}
-              placeholder={typeWallet === 'banque' ? 'CD00 0000 0000 0000' : '+243 8X XXX XXXX'}
-              value={numero}
-              onChange={setNumero}
-              keyType={typeWallet === 'banque' ? 'default' : 'phone-pad'}
-              theme={t}
-            />
+        {typeWallet !== 'banque' && (
+  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+    <TouchableOpacity
+      onPress={() => setAfficherPays(true)}
+      style={{
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: t.card, borderWidth: 1, borderColor: t.border,
+        borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+        marginRight: 8,
+      }}
+    >
+      <CountryPicker
+        countryCode={countryCode}
+        withFlag
+        withCallingCode
+        withEmoji
+        onSelect={(country) => {
+          setCountryCode(country.cca2);
+          setCallingCode(country.callingCode[0]);
+        }}
+        visible={afficherPays}
+        onClose={() => setAfficherPays(false)}
+      />
+<Text style={{ color: t.text, fontWeight: '600', marginLeft: 4 }}>
+  {callingCode ? `+${callingCode}` : 'Choisir code du pays'}
+</Text>
+    </TouchableOpacity>
+  </View>
+)}
+<InputField
+  label={typeWallet === 'banque' ? 'Numéro de compte' : 'Numéro de téléphone'}
+  placeholder={typeWallet === 'banque' ? `${countryCode}00 0000 0000 0000` : 'Ex: 812345678'}
+  value={numero}
+  onChange={setNumero}
+  keyType={typeWallet === 'banque' ? 'default' : 'phone-pad'}
+  theme={t}
+/>
             <View style={{ marginTop: 16 }}>
               {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginBottom: 12, textAlign: 'center' }}>{erreur}</Text> : null}
               <BtnPrimary
@@ -1367,10 +1469,11 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
   const [wallets, setWallets] = useState<any[]>([]);
   const [chargement, setChargement] = useState(true);
 
-  const couleurs: any = {
+ const couleurs: any = {
+    'orange':  { bg: '#FF6600', accent: 'rgba(255,255,255,0.15)' },
+    'mtn':     { bg: '#FFCC00', accent: 'rgba(0,0,0,0.10)' },
+    'moov':    { bg: '#0066B3', accent: 'rgba(255,255,255,0.12)' },
     'mpesa':   { bg: '#0A5C3C', accent: 'rgba(255,255,255,0.15)' },
-    'airtel':  { bg: '#8B0000', accent: 'rgba(255,255,255,0.12)' },
-    'orange':  { bg: '#7A4500', accent: 'rgba(255,255,255,0.12)' },
     'banque':  { bg: '#0A2A6E', accent: 'rgba(255,255,255,0.12)' },
     'default': { bg: '#1A1A2E', accent: 'rgba(255,255,255,0.10)' },
   };
