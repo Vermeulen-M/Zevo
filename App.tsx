@@ -449,7 +449,7 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
           <BtnPrimary label="Créer mon compte" loading={load} onPress={async () => {
             setLoad(true); setErr('');
            const telephoneComplet = `+${callingCode}${tel}`;
-const r = await apiInscription(nom, email, telephoneComplet, mdp);
+const r = await apiInscription(nom, email, telephoneComplet, mdp, callingCode);
             setLoad(false);
             if (r.succes) {
               await AsyncStorage.setItem('token', r.data.token);
@@ -1176,7 +1176,12 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
 useEffect(() => {
   async function chargerUser() {
     const userStr = await AsyncStorage.getItem('user');
-    if (userStr) setUser(JSON.parse(userStr));
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+      const result = await getWallets(userData.id);
+      if (result.succes) setWallets(result.data.wallets);
+    }
   }
   chargerUser();
 }, []);
@@ -1235,7 +1240,7 @@ const walletItems = wallets.length > 0
         </ScrollView>
       )}
 
-      {tab === 'monqr' && (
+     {tab === 'monqr' && (
         <ScrollView contentContainerStyle={{ alignItems: 'center', padding: 24 }}>
           <Card theme={t} style={{ width: 190, height: 190, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
            <QRCode
@@ -1246,10 +1251,23 @@ const walletItems = wallets.length > 0
 />
           </Card>
 
-          <Text style={{ fontSize: F.lg, fontWeight: '600', color: t.text, marginBottom: 4 }}>Mwamba Kalombo</Text>
-          <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 20 }}>+243 81 234 5678</Text>
+          <Text style={{ fontSize: F.lg, fontWeight: '600', color: t.text, marginBottom: 4 }}>{user ? user.nom : ''}</Text>
+          <Text style={{ fontSize: F.sm, color: t.sub, marginBottom: 20 }}>{user ? user.telephone : ''}</Text>
 
-          <Tabs items={walletItems} active={walletQR} onChange={setWalletQR} theme={t} />
+          {wallets.length === 0 ? (
+            <Card theme={t} style={{ width: '100%', padding: 16, marginBottom: 16, backgroundColor: t.isDark ? 'rgba(255,159,10,0.1)' : '#FFF8E8' }}>
+              <Text style={{ color: t.text, fontSize: F.sm, textAlign: 'center' }}>
+                ⚠️ Ajoutez un wallet pour recevoir de l'argent
+              </Text>
+            </Card>
+          ) : (
+            <>
+              <Tabs items={walletItems} active={walletQR} onChange={setWalletQR} theme={t} />
+              <Text style={{ fontSize: F.xs, color: t.sub, textAlign: 'center', marginTop: 12, marginBottom: 16, lineHeight: 18 }}>
+                Votre wallet par défaut reçoit l'argent. Vous pouvez le changer à tout moment dans Wallets.
+              </Text>
+            </>
+          )}
 
           <Text style={{ fontSize: F.xs, color: t.sub, textAlign: 'center', marginVertical: 16, lineHeight: 18 }}>
             Partage ce QR pour recevoir depuis n'importe quel réseau

@@ -38,13 +38,14 @@ api.interceptors.request.use(
 // ============================================
 
 // Inscription — créer un nouveau compte
-export const inscription = async (nom, email, telephone, motDePasse) => {
+export const inscription = async (nom, email, telephone, motDePasse, callingCode = '225') => {
     try {
         const reponse = await api.post('/auth/inscription', {
             nom,
             email,
             telephone,
             mot_de_passe: motDePasse,
+            calling_code: callingCode,
         });
         return { succes: true, data: reponse.data };
     } catch (erreur) {
@@ -67,7 +68,7 @@ export const connexion = async (identifiant, motDePasse, fcmToken = '') => {
     } catch (erreur) {
         return {
             succes: false,
-            erreur: erreur.response?.data?.erreur || 'Erreur de connexion au serveur',
+            erreur: erreur.message + ' | ' + JSON.stringify(erreur.response?.data || 'pas de réponse'),
         };
     }
 };
