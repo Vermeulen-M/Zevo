@@ -591,7 +591,7 @@ function EcranCreerPin({ onSuccess }: { onSuccess: () => void }) {
 // ============================================
 // ÉCRAN PIN
 // ============================================
-function EcranPin({ onSuccess }: { onSuccess: () => void }) {
+function EcranPin({ onSuccess, onRetourConnexion }: { onSuccess: () => void, onRetourConnexion: () => void }) {
   const [pin, setPin] = useState('');
   const shake = useRef(new Animated.Value(0)).current;
   const t = useTheme();
@@ -700,11 +700,11 @@ async function appuyer(c: string) {
 </View>
       </View>
 
-      <TouchableOpacity
+    <TouchableOpacity
         onPress={async () => {
           await AsyncStorage.removeItem('token');
           await AsyncStorage.removeItem('user');
-          onSuccess();
+          onRetourConnexion();
         }}
         style={{ marginTop: 32 }}
       >
@@ -1737,8 +1737,10 @@ setupNotifications();
   if (ecranAuth === 'connexion') return <EcranConnexion onConnexion={() => setEcranAuth(null)} onInscription={() => setEcranAuth('inscription')} />;
   if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth('creerPin')} onConnexion={() => setEcranAuth('connexion')} />;
   if (ecranAuth === 'creerPin') return <EcranCreerPin onSuccess={() => setEcranAuth(null)} />;
-  if (!pinOk) return <EcranPin onSuccess={() => setPinOk(true)} />;
-
+  if (!pinOk) return <EcranPin 
+  onSuccess={() => setPinOk(true)} 
+  onRetourConnexion={() => setEcranAuth('connexion')} 
+/>;
   if (afficherEnvoyer) return <EcranEnvoyer onRetour={() => setAfficherEnvoyer(false)} />;
 
   return (
