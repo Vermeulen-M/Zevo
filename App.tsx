@@ -448,7 +448,8 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
 
           <BtnPrimary label="Créer mon compte" loading={load} onPress={async () => {
             setLoad(true); setErr('');
-            const r = await apiInscription(nom, email, tel, mdp);
+           const telephoneComplet = `+${callingCode}${tel}`;
+const r = await apiInscription(nom, email, telephoneComplet, mdp);
             setLoad(false);
             if (r.succes) {
               await AsyncStorage.setItem('token', r.data.token);
@@ -1006,7 +1007,7 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
             setDestinataireInfo(null);
             if (val.length >= 9) {
               setRecherche(true);
-              const result = await chercherUtilisateur(val);
+             const result = await chercherUtilisateur(`+${callingCode}${val}`);
               setRecherche(false);
               if (result.succes && result.data.trouve) {
                 setDestinataireInfo(result.data.user);
@@ -1081,8 +1082,9 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
               setErreur('');
               try {
                const reseau = walletSource.type_wallet === 'orange' ? 'ORANGE' : 'MTN';
+    const destinataireComplet = `+${callingCode}${destinataire}`;
                 const result = await payerMobileMoney(
-                  destinataire,
+                  destinataireComplet,
                   Number(montant),
                   reseau,
                   `ZEVO-${Date.now()}`
@@ -1432,7 +1434,8 @@ const types = [
                     const user = userStr ? JSON.parse(userStr) : null;
                     if (user) {
                       if (typeWallet !== 'banque') {
-                        const result = await verifierWalletMpesa(user.id, numero, nom, typeWallet, numero);
+                     const numeroComplet = `+${callingCode}${numero}`;
+const result = await verifierWalletMpesa(user.id, numeroComplet, nom, typeWallet, numeroComplet);
                         if (result.succes) {
                           setEtape('verification');
                           setCountdown(120);
