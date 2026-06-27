@@ -5,6 +5,7 @@
 import QRCode from 'react-native-qrcode-svg';
 import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
+import { Vibration } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur } from './services/api';
