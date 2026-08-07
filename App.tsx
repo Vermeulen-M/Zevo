@@ -8,7 +8,7 @@ import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur } from './services/api';
+import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
 import {
   View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
@@ -1091,8 +1091,8 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
                   `ZEVO-${Date.now()}`
                 );
                 if (result.succes) {
-                  setEtape('confirmation');
-                  setCountdown(120);
+                setEtape('confirmation');
+                  setCountdown(120);  
                 } else {
                   setErreur(result.erreur || 'Erreur de paiement');
                 }
@@ -1299,6 +1299,7 @@ const [afficherPays, setAfficherPays] = useState(false);
   const [erreur, setErreur] = useState('');
   const [etape, setEtape] = useState<'formulaire' | 'verification'>('formulaire');
   const [countdown, setCountdown] = useState(120);
+  const [typesWallets, setTypesWallets] = useState<any[]>([]);
 
   useEffect(() => {
     if (etape === 'verification') {
@@ -1316,13 +1317,19 @@ const [afficherPays, setAfficherPays] = useState(false);
       return () => clearInterval(timer);
     }
   }, [etape]);
-const types = [
-    { id: 'orange', label: 'Orange Money CI', bg: '#FF6600' },
-    { id: 'mtn',    label: 'MTN MoMo CI',      bg: '#FFCC00' },
-    { id: 'moov',   label: 'Moov Money CI',    bg: '#0066B3' },
-    { id: 'mpesa',  label: 'M-Pesa (bientôt disponible)', bg: '#0A5C3C' },
-    { id: 'banque', label: 'Compte bancaire',  bg: '#0A2A6E' },
-  ];
+const types = typesWallets.length > 0 
+    ? typesWallets.map(tw => ({
+        id: tw.code,
+        label: tw.label,
+        bg: tw.couleur,
+      }))
+    : [
+        { id: 'orange', label: 'Orange Money CI', bg: '#FF6600' },
+        { id: 'mtn',    label: 'MTN MoMo CI',     bg: '#FFCC00' },
+        { id: 'moov',   label: 'Moov Money CI',   bg: '#0066B3' },
+        { id: 'mpesa',  label: 'M-Pesa (bientôt disponible)', bg: '#0A5C3C' },
+        { id: 'banque', label: 'Compte bancaire',  bg: '#0A2A6E' },
+      ];
 
   if (etape === 'verification') {
     return (
@@ -1451,13 +1458,14 @@ const types = [
                   try {
                     const userStr = await AsyncStorage.getItem('user');
                     const user = userStr ? JSON.parse(userStr) : null;
-                    if (user) {
+              if (user) {
                       if (typeWallet !== 'banque') {
                      const numeroComplet = `+${callingCode}${numero}`;
 const result = await verifierWalletMpesa(user.id, numeroComplet, nom, typeWallet, numeroComplet);
                         if (result.succes) {
                           setEtape('verification');
                           setCountdown(120);
+                          Vibration.vibrate(200);
                         } else {
                           setErreur(result.erreur);
                         }

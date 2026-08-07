@@ -8,7 +8,7 @@ import axios from 'axios';
 // URL de base du serveur backend
 // En développement = ton PC local
 // En production = ton serveur cloud
-const BASE_URL = 'http://10.41.27.218:3000';
+const BASE_URL = 'http://10.225.21.218:3000';
 // Note : 10.0.2.2 = adresse spéciale qui pointe vers
 // ton PC depuis l'émulateur Android (localhost ne fonctionne pas)
 
@@ -215,6 +215,19 @@ export const transfererFlutterwave = async (telephone, montant, reseau, referenc
 export const chercherUtilisateur = async (telephone) => {
     try {
         const reponse = await api.get(`/auth/chercher/${telephone}`);
+        return { succes: true, data: reponse.data };
+    } catch (erreur) {
+        return {
+            succes: false,
+            erreur: erreur.response?.data?.erreur || 'Erreur serveur',
+        };
+    }
+};
+
+// Récupérer les types de wallets disponibles
+export const getTypesWallets = async () => {
+    try {
+        const reponse = await api.get('/wallets/types');
         return { succes: true, data: reponse.data };
     } catch (erreur) {
         return {
