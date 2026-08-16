@@ -7,6 +7,7 @@ import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import QRCodeScanner from 'react-native-qrcode-scanner';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
@@ -417,7 +418,7 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
 
         <Card theme={t} style={{ gap: 12 }}>
           <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 4 }}>Inscription</Text>
-          <InputField label="Nom complet" placeholder="Jean Kabila" value={nom} onChange={setNom} theme={t} />
+          <InputField label="Nom complet" placeholder="Votre nom complet" value={nom} onChange={setNom} theme={t} />
           <InputField label="Email" placeholder="email@exemple.com" value={email} onChange={setEmail} keyType="email-address" theme={t} />
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
   <TouchableOpacity
@@ -1171,43 +1172,23 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
       </View>
 
       <ScrollView>
-        <Card theme={t} style={{ marginHorizontal: 16, padding: 0 }}>
-          {(tab === 'tous' || tab === 'envoye') && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text>↑</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Jean Kabila</Text>
-                <Text style={{ fontSize: F.xs, color: t.sub }}>Aujourd'hui · M-Pesa</Text>
-              </View>
-              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.neg }}>-5 000 CDF</Text>
-            </View>
-          )}
-          {(tab === 'tous' || tab === 'recu') && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8FFE8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text>↓</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Diaspora BE</Text>
-                <Text style={{ fontSize: F.xs, color: t.sub }}>Hier · Virement</Text>
-              </View>
-              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.pos }}>+20 000 CDF</Text>
-            </View>
-          )}
-        </Card>
+        <View style={{ padding: 24, alignItems: 'center' }}>
+          <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center' }}>
+            Vos transactions apparaîtront ici
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
 }
-
 // ============================================
 // ÉCRAN PAYER
 // ============================================
 function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
   const [user, setUser] = useState<any>(null);
   const [wallets, setWallets] = useState<any[]>([]);
+  const [afficherScanner, setAfficherScanner] = useState(false);
+  const [destinataireQR, setDestinataireQR] = useState<any>(null);
 
 useEffect(() => {
   async function chargerUser() {
@@ -1233,6 +1214,34 @@ const walletItems = wallets.length > 0
     ? wallets.map(w => ({ id: w.type_wallet, label: w.nom }))
     : [{ id: 'default', label: 'Mon wallet' }];
 
+    if (afficherScanner) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+        <QRCodeScanner
+          onRead={(e) => {
+            try {
+              const data = JSON.parse(e.data);
+              setDestinataireQR(data);
+              setAfficherScanner(false);
+            } catch {
+              setAfficherScanner(false);
+            }
+          }}
+          topContent={
+            <Text style={{ color: '#fff', fontSize: F.md, marginBottom: 16, textAlign: 'center' }}>
+              Scannez le QR code Zevo du destinataire
+            </Text>
+          }
+          bottomContent={
+            <TouchableOpacity onPress={() => setAfficherScanner(false)} style={{ marginTop: 24 }}>
+              <Text style={{ color: C.p1, fontSize: F.sm }}>Annuler</Text>
+            </TouchableOpacity>
+          }
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
@@ -1246,7 +1255,7 @@ const walletItems = wallets.length > 0
       {tab === 'payer' && (
         <ScrollView>
           <View style={{ padding: 16, gap: 12 }}>
-            <BtnPrimary label="Scanner un QR Code" onPress={onTransaction} />
+           <BtnPrimary label="Scanner un QR Code" onPress={() => setAfficherScanner(true)} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
               <Text style={{ color: t.sub, fontSize: F.sm }}>ou</Text>
@@ -1256,22 +1265,10 @@ const walletItems = wallets.length > 0
 
             <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 8 }}>MARCHANDS POPULAIRES</Text>
             <Card theme={t} style={{ padding: 0 }}>
-              {[
-                { nom: 'Shoprite Kinshasa', cat: 'Grande distribution' },
-                { nom: 'Total Energies', cat: 'Station-service' },
-                { nom: 'Pharmacie Centrale', cat: 'Santé' },
-                { nom: 'UNIKIN', cat: 'Éducation' },
-              ].map((m, i, arr) => (
-                <TouchableOpacity key={m.nom} onPress={onTransaction} activeOpacity={0.75}
-                  style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: i < arr.length - 1 ? 0.5 : 0, borderBottomColor: t.border }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{m.nom}</Text>
-                    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{m.cat}</Text>
-                  </View>
-                  <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
-                </TouchableOpacity>
-              ))}
-            </Card>
+          <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center', padding: 24 }}>
+    Les marchands partenaires arrivent bientôt !
+  </Text>
+</Card>
           </View>
         </ScrollView>
       )}

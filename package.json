@@ -18,17 +18,21 @@
     "axios": "^1.17.0",
     "react": "19.2.3",
     "react-native": "0.85.3",
+    "react-native-camera": "^4.2.1",
     "react-native-country-picker-modal": "^2.0.0",
     "react-native-gesture-handler": "^3.0.0",
     "react-native-heroicons": "^4.0.0",
     "react-native-image-picker": "^8.2.1",
+    "react-native-qrcode-scanner": "^1.5.5",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "^4.4.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-sound": "^0.13.0",
     "react-native-svg": "^15.15.5",
     "react-native-view-shot": "^5.1.0",
-    "react-native-worklets": "^0.9.1"
+    "react-native-vision-camera": "^5.2.2",
+    "react-native-worklets": "^0.9.1",
+    "vision-camera-code-scanner": "^0.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
