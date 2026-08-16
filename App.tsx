@@ -418,7 +418,7 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
 
         <Card theme={t} style={{ gap: 12 }}>
           <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5, marginBottom: 4 }}>Inscription</Text>
-          <InputField label="Nom complet" placeholder="Votre nom complet" value={nom} onChange={setNom} theme={t} />
+          <InputField label="Nom complet" placeholder="Jean Kabila" value={nom} onChange={setNom} theme={t} />
           <InputField label="Email" placeholder="email@exemple.com" value={email} onChange={setEmail} keyType="email-address" theme={t} />
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
   <TouchableOpacity
@@ -1172,15 +1172,37 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
       </View>
 
       <ScrollView>
-        <View style={{ padding: 24, alignItems: 'center' }}>
-          <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center' }}>
-            Vos transactions apparaîtront ici
-          </Text>
-        </View>
+        <Card theme={t} style={{ marginHorizontal: 16, padding: 0 }}>
+          {(tab === 'tous' || tab === 'envoye') && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text>↑</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Jean Kabila</Text>
+                <Text style={{ fontSize: F.xs, color: t.sub }}>Aujourd'hui · M-Pesa</Text>
+              </View>
+              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.neg }}>-5 000 CDF</Text>
+            </View>
+          )}
+          {(tab === 'tous' || tab === 'recu') && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8FFE8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text>↓</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Diaspora BE</Text>
+                <Text style={{ fontSize: F.xs, color: t.sub }}>Hier · Virement</Text>
+              </View>
+              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.pos }}>+20 000 CDF</Text>
+            </View>
+          )}
+        </Card>
       </ScrollView>
     </View>
   );
 }
+
 // ============================================
 // ÉCRAN PAYER
 // ============================================
@@ -1265,10 +1287,22 @@ const walletItems = wallets.length > 0
 
             <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 8 }}>MARCHANDS POPULAIRES</Text>
             <Card theme={t} style={{ padding: 0 }}>
-          <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center', padding: 24 }}>
-    Les marchands partenaires arrivent bientôt !
-  </Text>
-</Card>
+              {[
+                { nom: 'Shoprite Kinshasa', cat: 'Grande distribution' },
+                { nom: 'Total Energies', cat: 'Station-service' },
+                { nom: 'Pharmacie Centrale', cat: 'Santé' },
+                { nom: 'UNIKIN', cat: 'Éducation' },
+              ].map((m, i, arr) => (
+                <TouchableOpacity key={m.nom} onPress={onTransaction} activeOpacity={0.75}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: i < arr.length - 1 ? 0.5 : 0, borderBottomColor: t.border }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{m.nom}</Text>
+                    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{m.cat}</Text>
+                  </View>
+                  <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </Card>
           </View>
         </ScrollView>
       )}
