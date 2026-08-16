@@ -6,13 +6,14 @@ import QRCode from 'react-native-qrcode-svg';
 import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
 import {
-  View, Text, StyleSheet, StatusBar, TouchableOpacity,
+ View, Text, StyleSheet, StatusBar, TouchableOpacity,
   ScrollView, useColorScheme, SafeAreaView, Animated,
-  TextInput, Dimensions, Platform,
+  TextInput, Dimensions, Platform, Image,
 } from 'react-native';
 
 const { width: SW } = Dimensions.get('window');
@@ -399,6 +400,7 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
   const [callingCode, setCallingCode] = useState('225');
   const [afficherPays, setAfficherPays] = useState(false);
   const [mdp, setMdp] = useState('');
+  const [mdpConfirm, setMdpConfirm] = useState('');
   const [load, setLoad] = useState(false);
   const [err, setErr] = useState('');
 
@@ -443,15 +445,48 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
   </TouchableOpacity>
 </View>
 <InputField label="Téléphone" placeholder="Ex: 0102030405" value={tel} onChange={setTel} keyType="phone-pad" theme={t} />
-          <InputField label="Mot de passe" placeholder="••••••••" value={mdp} onChange={setMdp} secure theme={t} />
+          <InputField label="Mot de passe" placeholder="Min. 8 caractères, 1 majuscule, 1 chiffre" value={mdp} onChange={setMdp} secure theme={t} />
+<InputField label="Confirmer le mot de passe" placeholder="••••••••" value={mdpConfirm} onChange={setMdpConfirm} secure theme={t} />
 
           {err ? <Text style={{ color: C.neg, fontSize: F.xs, textAlign: 'center' }}>{err}</Text> : null}
 
           <BtnPrimary label="Créer mon compte" loading={load} onPress={async () => {
-            setLoad(true); setErr('');
-           const telephoneComplet = `+${callingCode}${tel}`;
+       setLoad(true); setErr('');
+
+// Validation
+if (!nom || nom.trim().length < 2) {
+  setErr('Le nom doit contenir au moins 2 caractères');
+  setLoad(false); return;
+}
+if (!email || !email.includes('@')) {
+  setErr('Email invalide');
+  setLoad(false); return;
+}
+if (!tel || tel.length < 6) {
+  setErr('Numéro de téléphone invalide');
+  setLoad(false); return;
+}
+if (mdp.length < 8) {
+  setErr('Le mot de passe doit contenir au moins 8 caractères');
+  setLoad(false); return;
+}
+if (!/[A-Z]/.test(mdp)) {
+  setErr('Le mot de passe doit contenir au moins 1 majuscule');
+  setLoad(false); return;
+}
+if (!/[0-9]/.test(mdp)) {
+  setErr('Le mot de passe doit contenir au moins 1 chiffre');
+  setLoad(false); return;
+}
+if (mdp !== mdpConfirm) {
+  setErr('Les mots de passe ne correspondent pas');
+  setLoad(false); return;
+}
+
+const telephoneComplet = `+${callingCode}${tel}`;
 const r = await apiInscription(nom, email, telephoneComplet, mdp, callingCode);
-            setLoad(false);
+
+setLoad(false);
             if (r.succes) {
               await AsyncStorage.setItem('token', r.data.token);
               await AsyncStorage.setItem('user', JSON.stringify(r.data.user));
@@ -1591,14 +1626,29 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
 function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
 const [user, setUser] = useState<any>(null);
 const [wallets, setWallets] = useState<any[]>([]);
+const [photoUri, setPhotoUri] = useState<string | null>(null);
+
 useEffect(() => {
   async function chargerUser() {
     const userStr = await AsyncStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
+    const photo = await AsyncStorage.getItem('photoUri');
+    if (photo) setPhotoUri(photo);
   }
   chargerUser();
 }, []);
 
+const choisirPhoto = async () => {
+  const result = await launchImageLibrary({
+    mediaType: 'photo',
+    quality: 0.8,
+  });
+  if (result.assets && result.assets[0]?.uri) {
+    const uri = result.assets[0].uri;
+    setPhotoUri(uri);
+    await AsyncStorage.setItem('photoUri', uri);
+  }
+};
 const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
 
   const t = useTheme();
@@ -1617,22 +1667,27 @@ const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
       </View>
 
       {/* Hero profil */}
-      <View style={{ alignItems: 'center', padding: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
-        <View style={{
+     <View style={{ alignItems: 'center', padding: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+        <TouchableOpacity onPress={choisirPhoto} style={{
           width: 76, height: 76, borderRadius: 38,
           backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center',
           marginBottom: 14, shadowColor: C.p1,
           shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+          overflow: 'hidden',
         }}>
-        <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>{user ? user.nom.charAt(0).toUpperCase() : 'Z'}</Text>
-        </View>
-    <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text, letterSpacing: -0.3 }}>{prenomNom}</Text>
-        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, marginBottom: 14 }}>+243 81 234 5678</Text>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={{ width: 76, height: 76, borderRadius: 38 }} />
+          ) : (
+            <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800' }}>{user ? user.nom.charAt(0).toUpperCase() : 'Z'}</Text>
+          )}
+        </TouchableOpacity>
+        <Text style={{ fontSize: F.xs, color: t.sub, marginBottom: 8 }}>Appuyer pour changer la photo</Text>
+        <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text, letterSpacing: -0.3 }}>{prenomNom}</Text>
+        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, marginBottom: 14 }}>{user ? user.telephone : ''}</Text>
         <View style={{ backgroundColor: '#E8FFF5', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
           <Text style={{ color: '#085041', fontSize: F.xs, fontWeight: '700' }}>KYC Vérifié ✓</Text>
         </View>
       </View>
-
       <View style={{ padding: 16, gap: 8 }}>
         {options.map(opt => (
           <TouchableOpacity
