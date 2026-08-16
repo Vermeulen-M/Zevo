@@ -1763,6 +1763,8 @@ const [user, setUser] = useState<any>(null);
 const [wallets, setWallets] = useState<any[]>([]);
 const [photoUri, setPhotoUri] = useState<string | null>(null);
 const [afficherChangerPin, setAfficherChangerPin] = useState(false);
+const [afficherModifierProfil, setAfficherModifierProfil] = useState(false);
+const [nouveauNom, setNouveauNom] = useState('');
 const t = useTheme();
 
 useEffect(() => {
@@ -1795,8 +1797,65 @@ if (afficherChangerPin) {
     />;
   }
 
+  if (afficherModifierProfil) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+        <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+        <DecoBg />
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+          <TouchableOpacity onPress={() => setAfficherModifierProfil(false)} style={{ marginRight: 16 }}>
+            <Text style={{ color: C.p1, fontSize: F.lg }}>←</Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: F.xl, fontWeight: '800', color: t.text }}>Modifier le profil</Text>
+        </View>
+        <ScrollView style={{ padding: 16 }}>
+          <InputField 
+            label="Nom complet" 
+            placeholder={user?.nom || 'Votre nom'} 
+            value={nouveauNom} 
+            onChange={setNouveauNom} 
+            theme={t} 
+          />
+          <View style={{ marginTop: 24 }}>
+            <BtnPrimary
+              label="Enregistrer"
+              onPress={async () => {
+                if (!nouveauNom.trim()) return;
+                const userStr = await AsyncStorage.getItem('user');
+                if (userStr) {
+                  const userData = JSON.parse(userStr);
+                  userData.nom = nouveauNom;
+                 await AsyncStorage.setItem('user', JSON.stringify(userData));
+                  setUser(userData);
+                  // Mettre à jour dans Supabase via le backend
+                  try {
+                    await fetch(`http://10.225.21.218:3000/auth/modifier-profil`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ user_id: userData.id, nom: nouveauNom }),
+                    });
+                 } catch (e) {}
+                  setUser({...user, nom: nouveauNom});
+                  setAfficherModifierProfil(false);
+                }
+              }}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+if (afficherChangerPin) {
+    return <EcranChangerPin 
+      onRetour={() => setAfficherChangerPin(false)} 
+      userId={user?.id} 
+    />;
+  }
+
 const options = [
-    { label: 'Sécurité & PIN', action: () => setAfficherChangerPin(true) },
+   { label: 'Modifier le profil', action: () => setAfficherModifierProfil(true) },
+   { label: 'Sécurité & PIN', action: () => setAfficherChangerPin(true) },
     { label: 'Limites de transaction', action: () => {} },
     { label: 'Notifications', action: () => {} },
     { label: 'Langue', action: () => {} },
