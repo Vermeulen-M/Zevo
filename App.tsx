@@ -1621,12 +1621,149 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
   );
 }
 // ============================================
+// ÉCRAN CHANGER PIN
+// ============================================
+function EcranChangerPin({ onRetour, userId }: { onRetour: () => void, userId: number }) {
+  const t = useTheme();
+  const [ancienPin, setAncienPin] = useState('');
+  const [nouveauPin, setNouveauPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [etape, setEtape] = useState<'ancien' | 'nouveau' | 'confirmer'>('ancien');
+  const [erreur, setErreur] = useState('');
+  const [chargement, setChargement] = useState(false);
+  const shake = useRef(new Animated.Value(0)).current;
+
+  function secouer() {
+    Animated.sequence([
+      Animated.timing(shake, { toValue: 12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -12, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }
+
+  async function appuyer(c: string) {
+    setErreur('');
+    if (etape === 'ancien') {
+      if (ancienPin.length >= 6) return;
+      const p = ancienPin + c;
+      setAncienPin(p);
+      if (p.length === 6) {
+        setTimeout(async () => {
+          setChargement(true);
+          const result = await verifierPin(userId, p);
+          setChargement(false);
+          if (result.succes) {
+            setEtape('nouveau');
+          } else {
+            setErreur('PIN incorrect');
+            secouer();
+            setAncienPin('');
+          }
+        }, 200);
+      }
+    } else if (etape === 'nouveau') {
+      if (nouveauPin.length >= 6) return;
+      const p = nouveauPin + c;
+      setNouveauPin(p);
+      if (p.length === 6) {
+        setTimeout(() => setEtape('confirmer'), 300);
+      }
+    } else {
+      if (confirmPin.length >= 6) return;
+      const p = confirmPin + c;
+      setConfirmPin(p);
+      if (p.length === 6) {
+        setTimeout(async () => {
+          if (p !== nouveauPin) {
+            setErreur('Les PIN ne correspondent pas');
+            secouer();
+            setConfirmPin('');
+            return;
+          }
+          setChargement(true);
+          await creerPin(userId, nouveauPin);
+          setChargement(false);
+          onRetour();
+        }, 300);
+      }
+    }
+  }
+
+  function effacer() {
+    if (etape === 'ancien') setAncienPin(ancienPin.slice(0, -1));
+    else if (etape === 'nouveau') setNouveauPin(nouveauPin.slice(0, -1));
+    else setConfirmPin(confirmPin.slice(0, -1));
+  }
+
+  const pinActuel = etape === 'ancien' ? ancienPin : etape === 'nouveau' ? nouveauPin : confirmPin;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <DecoBg />
+      <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
+
+      <TouchableOpacity onPress={onRetour} style={{ position: 'absolute', top: 40, left: 24 }}>
+        <Text style={{ color: C.p1, fontSize: F.lg }}>←</Text>
+      </TouchableOpacity>
+
+      <View style={{ alignItems: 'center', marginBottom: 48 }}>
+        <LogoZevo size={32} />
+        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20 }}>
+          {etape === 'ancien' ? 'Entrez votre ancien PIN' : etape === 'nouveau' ? 'Nouveau PIN' : 'Confirmez le nouveau PIN'}
+        </Text>
+        {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginTop: 8 }}>{erreur}</Text> : null}
+      </View>
+
+      <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 52, transform: [{ translateX: shake }] }}>
+        {[0,1,2,3,4,5].map(i => (
+          <View key={i} style={{
+            width: 14, height: 14, borderRadius: 7,
+            backgroundColor: i < pinActuel.length ? C.p1 : 'transparent',
+            borderWidth: 1.5,
+            borderColor: i < pinActuel.length ? C.p1 : t.sub,
+            elevation: i < pinActuel.length ? 3 : 0,
+          }} />
+        ))}
+      </Animated.View>
+
+      <View style={{ width: '100%', gap: 12 }}>
+        {[['1','2','3'],['4','5','6'],['7','8','9']].map((row, i) => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            {row.map(k => (
+              <TouchableOpacity key={k} onPress={() => appuyer(k)} activeOpacity={0.75} style={{
+                width: 78, height: 78, borderRadius: 39,
+                backgroundColor: t.card, alignItems: 'center', justifyContent: 'center',
+                elevation: 4, borderWidth: 1, borderColor: t.border,
+              }}>
+                <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>{k}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+          <View style={{ width: 78, height: 78 }} />
+          <TouchableOpacity onPress={() => appuyer('0')} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>0</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={effacer} activeOpacity={0.75} style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', elevation: 4, borderWidth: 1, borderColor: t.border }}>
+            <Text style={{ fontSize: 22, fontWeight: '300', color: t.text }}>⌫</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ============================================
 // ÉCRAN PROFIL
 // ============================================
 function EcranProfil({ isDark, onDeconnexion }: { isDark: boolean, onDeconnexion: () => void }) {
 const [user, setUser] = useState<any>(null);
 const [wallets, setWallets] = useState<any[]>([]);
 const [photoUri, setPhotoUri] = useState<string | null>(null);
+const [afficherChangerPin, setAfficherChangerPin] = useState(false);
+const t = useTheme();
 
 useEffect(() => {
   async function chargerUser() {
@@ -1651,13 +1788,22 @@ const choisirPhoto = async () => {
 };
 const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
 
-  const t = useTheme();
+if (afficherChangerPin) {
+    return <EcranChangerPin 
+      onRetour={() => setAfficherChangerPin(false)} 
+      userId={user?.id} 
+    />;
+  }
 
-  const options = [
-    'Sécurité & PIN', 'Limites de transaction', 'Notifications',
-    'Langue', 'Accessibilité', 'Aide & Support', 'Se déconnecter',
+const options = [
+    { label: 'Sécurité & PIN', action: () => setAfficherChangerPin(true) },
+    { label: 'Limites de transaction', action: () => {} },
+    { label: 'Notifications', action: () => {} },
+    { label: 'Langue', action: () => {} },
+    { label: 'Accessibilité', action: () => {} },
+    { label: 'Aide & Support', action: () => {} },
+    { label: 'Se déconnecter', action: onDeconnexion },
   ];
-
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
       <DecoBg/>
@@ -1689,14 +1835,14 @@ const prenomNom = user ? user.nom.split(' ')[0] : 'Utilisateur';
         </View>
       </View>
       <View style={{ padding: 16, gap: 8 }}>
-        {options.map(opt => (
+  {options.map(opt => (
           <TouchableOpacity
-            key={opt}
-            onPress={opt === 'Se déconnecter' ? onDeconnexion : undefined}
+            key={opt.label}
+            onPress={opt.action}
             activeOpacity={0.75}
           >
             <Card theme={t} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
-              <Text style={{ fontSize: F.md, color: opt === 'Se déconnecter' ? C.neg : t.text, fontWeight: '500' }}>{opt}</Text>
+              <Text style={{ fontSize: F.md, color: opt.label === 'Se déconnecter' ? C.neg : t.text, fontWeight: '500' }}>{opt.label}</Text>
               <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
             </Card>
           </TouchableOpacity>
