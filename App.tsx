@@ -7,6 +7,7 @@ import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import CameraScreen from 'react-native-camera-kit';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
@@ -1244,36 +1245,67 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
   );
 }
 
-// ============================================
+/// ============================================
 // ÉCRAN PAYER
 // ============================================
 function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
   const [user, setUser] = useState<any>(null);
   const [wallets, setWallets] = useState<any[]>([]);
-
-useEffect(() => {
-  async function chargerUser() {
-    const userStr = await AsyncStorage.getItem('user');
-    if (userStr) {
-      const userData = JSON.parse(userStr);
-      setUser(userData);
-      const result = await getWallets(userData.id);
-      if (result.succes) setWallets(result.data.wallets);
-    }
-  }
-  chargerUser();
-}, []);
+  const [afficherScanner, setAfficherScanner] = useState(false);
+  const [destinataireQR, setDestinataireQR] = useState<any>(null);
   const [tab, setTab] = useState('payer');
   const [walletQR, setWalletQR] = useState('mpesa');
   const t = useTheme();
+
+  useEffect(() => {
+    async function chargerUser() {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+        const result = await getWallets(userData.id);
+        if (result.succes) setWallets(result.data.wallets);
+      }
+    }
+    chargerUser();
+  }, []);
 
   const tabItems = [
     { id: 'payer', label: 'Payer' },
     { id: 'monqr', label: 'Mon QR' },
   ];
-const walletItems = wallets.length > 0 
+
+  const walletItems = wallets.length > 0 
     ? wallets.map(w => ({ id: w.type_wallet, label: w.nom }))
     : [{ id: 'default', label: 'Mon wallet' }];
+
+  if (afficherScanner) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+        <CameraScreen
+          scanBarcode={true}
+          onReadCode={(event: any) => {
+            try {
+              const data = JSON.parse(event.nativeEvent.codeStringValue);
+              setDestinataireQR(data);
+              setAfficherScanner(false);
+            } catch {
+              setAfficherScanner(false);
+            }
+          }}
+          showFrame={true}
+          laserColor="blue"
+          frameColor="white"
+        />
+        <TouchableOpacity 
+          onPress={() => setAfficherScanner(false)} 
+          style={{ position: 'absolute', top: 40, left: 24 }}
+        >
+          <Text style={{ color: '#fff', fontSize: F.lg }}>← Annuler</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -1288,31 +1320,18 @@ const walletItems = wallets.length > 0
       {tab === 'payer' && (
         <ScrollView>
           <View style={{ padding: 16, gap: 12 }}>
-            <BtnPrimary label="Scanner un QR Code" onPress={onTransaction} />
+            <BtnPrimary label="Scanner un QR Code" onPress={() => setAfficherScanner(true)} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
               <Text style={{ color: t.sub, fontSize: F.sm }}>ou</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
             </View>
             <BtnOutline label="Entrer un numéro" onPress={onTransaction} />
-
             <Text style={{ fontSize: F.xs, color: t.sub, fontWeight: '700', letterSpacing: 1, marginTop: 8 }}>MARCHANDS POPULAIRES</Text>
-            <Card theme={t} style={{ padding: 0 }}>
-              {[
-                { nom: 'Shoprite Kinshasa', cat: 'Grande distribution' },
-                { nom: 'Total Energies', cat: 'Station-service' },
-                { nom: 'Pharmacie Centrale', cat: 'Santé' },
-                { nom: 'UNIKIN', cat: 'Éducation' },
-              ].map((m, i, arr) => (
-                <TouchableOpacity key={m.nom} onPress={onTransaction} activeOpacity={0.75}
-                  style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: i < arr.length - 1 ? 0.5 : 0, borderBottomColor: t.border }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>{m.nom}</Text>
-                    <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 2 }}>{m.cat}</Text>
-                  </View>
-                  <Text style={{ color: t.sub, fontSize: 18 }}>›</Text>
-                </TouchableOpacity>
-              ))}
+            <Card theme={t} style={{ alignItems: 'center', padding: 24 }}>
+              <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center' }}>
+                Les marchands partenaires arrivent bientôt !
+              </Text>
             </Card>
           </View>
         </ScrollView>
