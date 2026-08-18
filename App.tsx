@@ -7,7 +7,6 @@ import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import QRCodeScanner from 'react-native-qrcode-scanner';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
@@ -1149,13 +1148,40 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
 // ============================================
 function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
   const [tab, setTab] = useState('tous');
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [chargement, setChargement] = useState(true);
   const t = useTheme();
 
   const tabItems = [
-    { id: 'tous', label: 'Tous ' },
-    { id: 'envoye', label: 'Envoyé ' },
-    { id: 'recu', label: 'Reçu ' },
+    { id: 'tous', label: 'Tous' },
+    { id: 'envoye', label: 'Envoyé' },
+    { id: 'recu', label: 'Reçu' },
   ];
+
+  useEffect(() => {
+    async function chargerTransactions() {
+      try {
+        const userStr = await AsyncStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user) {
+          const result = await getTransactions(user.id, 50);
+          if (result.succes) setTransactions(result.data.transactions);
+        }
+      } catch (e) {
+        console.log('Erreur chargement transactions:', e);
+      } finally {
+        setChargement(false);
+      }
+    }
+    chargerTransactions();
+  }, []);
+
+  const transactionsFiltrees = transactions.filter(tx => {
+    if (tab === 'tous') return true;
+    if (tab === 'envoye') return tx.type === 'envoi' || tx.expediteur_id;
+    if (tab === 'recu') return tx.type === 'reception' || tx.destinataire_id;
+    return true;
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -1172,32 +1198,47 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
       </View>
 
       <ScrollView>
-        <Card theme={t} style={{ marginHorizontal: 16, padding: 0 }}>
-          {(tab === 'tous' || tab === 'envoye') && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text>↑</Text>
+        {chargement ? (
+          <Text style={{ color: t.sub, textAlign: 'center', marginTop: 24 }}>Chargement...</Text>
+        ) : transactionsFiltrees.length === 0 ? (
+          <View style={{ padding: 24, alignItems: 'center' }}>
+            <Text style={{ color: t.sub, fontSize: F.sm, textAlign: 'center' }}>
+              Aucune transaction pour l'instant
+            </Text>
+          </View>
+        ) : (
+          <Card theme={t} style={{ marginHorizontal: 16, padding: 0 }}>
+            {transactionsFiltrees.map((tx, i) => (
+              <View key={tx.id} style={{ 
+                flexDirection: 'row', alignItems: 'center', padding: 16, 
+                borderBottomWidth: i < transactionsFiltrees.length - 1 ? 0.5 : 0, 
+                borderBottomColor: t.border 
+              }}>
+                <View style={{ 
+                  width: 40, height: 40, borderRadius: 20, 
+                  backgroundColor: tx.expediteur_id ? '#FFE8E8' : '#E8FFE8', 
+                  alignItems: 'center', justifyContent: 'center', marginRight: 12 
+                }}>
+                  <Text>{tx.expediteur_id ? '↑' : '↓'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>
+                    {tx.nom_destinataire || tx.nom_expediteur || tx.description || 'Transaction'}
+                  </Text>
+                  <Text style={{ fontSize: F.xs, color: t.sub }}>
+                    {new Date(tx.created_at).toLocaleDateString('fr-FR')} · {tx.type}
+                  </Text>
+                </View>
+                <Text style={{ 
+                  fontSize: F.md, fontWeight: '700', 
+                  color: tx.expediteur_id ? C.neg : C.pos 
+                }}>
+                  {tx.expediteur_id ? '-' : '+'}{tx.montant} {tx.devise}
+                </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Jean Kabila</Text>
-                <Text style={{ fontSize: F.xs, color: t.sub }}>Aujourd'hui · M-Pesa</Text>
-              </View>
-              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.neg }}>-5 000 CDF</Text>
-            </View>
-          )}
-          {(tab === 'tous' || tab === 'recu') && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8FFE8', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text>↓</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: F.md, fontWeight: '600', color: t.text }}>Diaspora BE</Text>
-                <Text style={{ fontSize: F.xs, color: t.sub }}>Hier · Virement</Text>
-              </View>
-              <Text style={{ fontSize: F.md, fontWeight: '700', color: C.pos }}>+20 000 CDF</Text>
-            </View>
-          )}
-        </Card>
+            ))}
+          </Card>
+        )}
       </ScrollView>
     </View>
   );
@@ -1209,8 +1250,6 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
 function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
   const [user, setUser] = useState<any>(null);
   const [wallets, setWallets] = useState<any[]>([]);
-  const [afficherScanner, setAfficherScanner] = useState(false);
-  const [destinataireQR, setDestinataireQR] = useState<any>(null);
 
 useEffect(() => {
   async function chargerUser() {
@@ -1236,34 +1275,6 @@ const walletItems = wallets.length > 0
     ? wallets.map(w => ({ id: w.type_wallet, label: w.nom }))
     : [{ id: 'default', label: 'Mon wallet' }];
 
-    if (afficherScanner) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
-        <QRCodeScanner
-          onRead={(e) => {
-            try {
-              const data = JSON.parse(e.data);
-              setDestinataireQR(data);
-              setAfficherScanner(false);
-            } catch {
-              setAfficherScanner(false);
-            }
-          }}
-          topContent={
-            <Text style={{ color: '#fff', fontSize: F.md, marginBottom: 16, textAlign: 'center' }}>
-              Scannez le QR code Zevo du destinataire
-            </Text>
-          }
-          bottomContent={
-            <TouchableOpacity onPress={() => setAfficherScanner(false)} style={{ marginTop: 24 }}>
-              <Text style={{ color: C.p1, fontSize: F.sm }}>Annuler</Text>
-            </TouchableOpacity>
-          }
-        />
-      </SafeAreaView>
-    );
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
@@ -1277,7 +1288,7 @@ const walletItems = wallets.length > 0
       {tab === 'payer' && (
         <ScrollView>
           <View style={{ padding: 16, gap: 12 }}>
-           <BtnPrimary label="Scanner un QR Code" onPress={() => setAfficherScanner(true)} />
+            <BtnPrimary label="Scanner un QR Code" onPress={onTransaction} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
               <Text style={{ color: t.sub, fontSize: F.sm }}>ou</Text>
