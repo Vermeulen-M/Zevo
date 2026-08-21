@@ -7,7 +7,7 @@ import CountryPicker from 'react-native-country-picker-modal';
 import messaging from '@react-native-firebase/messaging';
 import { Vibration } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import CameraScreen from 'react-native-camera-kit';
+import { Camera } from 'react-native-camera-kit';
 import React, { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inscription as apiInscription, connexion as apiConnexion, creerPin, verifierPin, getWallets, ajouterWallet, getTransactions, getSoldeTotal, verifierWalletMpesa, payerMobileMoney, transfererFlutterwave, chercherUtilisateur, getTypesWallets } from './services/api';
@@ -965,10 +965,19 @@ function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
         <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 4, textAlign: 'center' }}>
           Entrez votre PIN M-Pesa pour confirmer
         </Text>
-        <Card theme={t} style={{ width: '100%', marginTop: 24, alignItems: 'center' }}>
-          <Text style={{ fontSize: F.xs, color: t.sub }}>MONTANT</Text>
-          <Text style={{ fontSize: F.xxxl, fontWeight: '900', color: t.text }}>{montant}</Text>
-          <Text style={{ fontSize: F.sm, color: t.sub }}>CDF → {destinataire}</Text>
+     <Card theme={t} style={{ width: '100%', marginTop: 24, alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: F.xs, color: t.sub }}>MONTANT ENVOYÉ</Text>
+          <Text style={{ fontSize: F.xxxl, fontWeight: '900', color: t.text }}>{montant} XOF</Text>
+          <View style={{ width: '100%', height: 0.5, backgroundColor: t.border }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+            <Text style={{ fontSize: F.sm, color: t.sub }}>Frais Zevo (0.3%)</Text>
+            <Text style={{ fontSize: F.sm, color: C.neg }}>-{Math.max(Math.round(Number(montant) * 0.003), 50)} XOF</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+            <Text style={{ fontSize: F.sm, fontWeight: '700', color: t.text }}>Destinataire reçoit</Text>
+            <Text style={{ fontSize: F.sm, fontWeight: '700', color: C.pos }}>{Number(montant) - Math.max(Math.round(Number(montant) * 0.003), 50)} XOF</Text>
+          </View>
+          <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 4 }}>→ {destinataire}</Text>
         </Card>
         <View style={{
           width: 120, height: 120, borderRadius: 60,
@@ -1279,10 +1288,11 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
     ? wallets.map(w => ({ id: w.type_wallet, label: w.nom }))
     : [{ id: 'default', label: 'Mon wallet' }];
 
-  if (afficherScanner) {
+if (afficherScanner) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
-        <CameraScreen
+        <Camera
+          style={{ flex: 1 }}
           scanBarcode={true}
           onReadCode={(event: any) => {
             try {
@@ -1293,10 +1303,29 @@ function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction:
               setAfficherScanner(false);
             }
           }}
-          showFrame={true}
-          laserColor="blue"
-          frameColor="white"
+          showFrame={false}
         />
+        {/* Cadre carré custom */}
+        <View style={{
+          position: 'absolute',
+          top: '30%',
+          left: '15%',
+          width: '70%',
+          aspectRatio: 1,
+          borderWidth: 2,
+          borderColor: C.p1,
+          borderRadius: 12,
+        }} />
+        <Text style={{
+          position: 'absolute',
+          top: '25%',
+          width: '100%',
+          textAlign: 'center',
+          color: '#fff',
+          fontSize: F.sm,
+        }}>
+          Scannez le QR code Zevo du destinataire
+        </Text>
         <TouchableOpacity 
           onPress={() => setAfficherScanner(false)} 
           style={{ position: 'absolute', top: 40, left: 24 }}
