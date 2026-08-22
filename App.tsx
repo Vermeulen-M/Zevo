@@ -908,13 +908,15 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
 // ============================================
 // ÉCRAN ENVOYER
 // ============================================
-function EcranEnvoyer({ onRetour }: { onRetour: () => void }) {
- const [countryCode, setCountryCode] = useState<any>('CI'); const [afficherPays, setAfficherPays] = useState(false); 
- const [callingCode, setCallingCode] = useState('225');  const [destinataireInfo, setDestinataireInfo] = useState<any>(null);
+function EcranEnvoyer({ onRetour, destinataireInitial }: { onRetour: () => void, destinataireInitial?: any }) {
+  const [countryCode, setCountryCode] = useState<any>('CI');
+  const [afficherPays, setAfficherPays] = useState(false);
+  const [callingCode, setCallingCode] = useState('225');
   const [recherche, setRecherche] = useState(false);
   const t = useTheme();
   const [montant, setMontant] = useState('');
-  const [destinataire, setDestinataire] = useState('');
+  const [destinataire, setDestinataire] = useState(destinataireInitial?.telephone || '');
+  const [destinataireInfo, setDestinataireInfo] = useState<any>(destinataireInitial || null);
   const [walletSource, setWalletSource] = useState<any>(null);
   const [wallets, setWallets] = useState<any[]>([]);
   const [chargement, setChargement] = useState(false);
@@ -1257,7 +1259,7 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
 /// ============================================
 // ÉCRAN PAYER
 // ============================================
-function EcranPayer({ isDark, onTransaction }: { isDark: boolean, onTransaction: () => void }) {
+function EcranPayer({ isDark, onTransaction, onScannerQR }: { isDark: boolean, onTransaction: () => void, onScannerQR: (data: any) => void }) {
   const [user, setUser] = useState<any>(null);
   const [wallets, setWallets] = useState<any[]>([]);
   const [afficherScanner, setAfficherScanner] = useState(false);
@@ -1297,8 +1299,8 @@ if (afficherScanner) {
           onReadCode={(event: any) => {
             try {
               const data = JSON.parse(event.nativeEvent.codeStringValue);
-              setDestinataireQR(data);
               setAfficherScanner(false);
+              onScannerQR(data);
             } catch {
               setAfficherScanner(false);
             }
@@ -1422,26 +1424,8 @@ const [callingCode, setCallingCode] = useState('225');
 const [afficherPays, setAfficherPays] = useState(false);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState('');
-  const [etape, setEtape] = useState<'formulaire' | 'verification'>('formulaire');
-  const [countdown, setCountdown] = useState(120);
   const [typesWallets, setTypesWallets] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (etape === 'verification') {
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setEtape('formulaire');
-            setErreur('Délai dépassé — réessayez');
-            return 120;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [etape]);
 const types = typesWallets.length > 0 
     ? typesWallets.map(tw => ({
         id: tw.code,
@@ -1455,38 +1439,6 @@ const types = typesWallets.length > 0
         { id: 'mpesa',  label: 'M-Pesa (bientôt disponible)', bg: '#0A5C3C' },
         { id: 'banque', label: 'Compte bancaire',  bg: '#0A2A6E' },
       ];
-
-  if (etape === 'verification') {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <DecoBg />
-        <LogoZevo size={32} />
-        <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 24, textAlign: 'center' }}>
-          Confirmez sur votre téléphone
-        </Text>
-        <Text style={{ fontSize: F.sm, color: t.sub, marginTop: 8, textAlign: 'center' }}>
-          Une notification M-Pesa a été envoyée sur {numero}
-        </Text>
-        <View style={{
-          width: 120, height: 120, borderRadius: 60,
-          borderWidth: 2, borderColor: countdown > 30 ? C.p1 : C.neg,
-          alignItems: 'center', justifyContent: 'center',
-          marginTop: 40,
-        }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: countdown > 30 ? C.p1 : C.neg }}>
-            {countdown}
-          </Text>
-          <Text style={{ fontSize: F.xs, color: t.sub }}>secondes</Text>
-        </View>
-        <Text style={{ color: t.sub, fontSize: F.xs, marginTop: 32, textAlign: 'center' }}>
-          1 CDF sera débité pour vérification
-        </Text>
-        <TouchableOpacity onPress={() => { setEtape('formulaire'); setCountdown(120); }} style={{ marginTop: 24 }}>
-          <Text style={{ color: C.neg, fontSize: F.sm }}>Annuler</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
@@ -1571,7 +1523,7 @@ const types = typesWallets.length > 0
             <View style={{ marginTop: 16 }}>
               {erreur ? <Text style={{ color: C.neg, fontSize: F.xs, marginBottom: 12, textAlign: 'center' }}>{erreur}</Text> : null}
               <BtnPrimary
-                label="Vérifier et ajouter"
+                label="Ajouter le wallet"
                 loading={chargement}
                 onPress={async () => {
                   if (!typeWallet || !numero) {
@@ -1583,25 +1535,18 @@ const types = typesWallets.length > 0
                   try {
                     const userStr = await AsyncStorage.getItem('user');
                     const user = userStr ? JSON.parse(userStr) : null;
-              if (user) {
-                      if (typeWallet !== 'banque') {
-                     const numeroComplet = `+${callingCode}${numero}`;
-const result = await verifierWalletMpesa(user.id, numeroComplet, nom, typeWallet, numeroComplet);
-                        if (result.succes) {
-                          setEtape('verification');
-                          setCountdown(120);
-                          Vibration.vibrate(200);
-                        } else {
-                          setErreur(result.erreur);
-                        }
+                    if (user) {
+                      const numeroComplet = typeWallet !== 'banque' ? `+${callingCode}${numero}` : numero;
+                      const result = await ajouterWallet(user.id, nom, typeWallet, numeroComplet);
+                      if (result.succes) {
+                        Vibration.vibrate(200);
+                        onRetour();
                       } else {
-                        const result = await ajouterWallet(user.id, nom, typeWallet, numero);
-                        if (result.succes) onRetour();
-                        else setErreur(result.erreur);
+                        setErreur(result.erreur);
                       }
                     }
                   } catch (e) {
-                    setErreur('Erreur lors de la vérification');
+                    setErreur('Erreur lors de l\'ajout');
                   } finally {
                     setChargement(false);
                   }
@@ -1614,7 +1559,6 @@ const result = await verifierWalletMpesa(user.id, numeroComplet, nom, typeWallet
     </SafeAreaView>
   );
 }
-
 // ============================================
 // ÉCRAN WALLETS
 // ============================================
@@ -2054,6 +1998,7 @@ function Navbar({ active, onChange, isDark }: { active: string, onChange: (s: st
 export default function App() {
   const [pinOk, setPinOk] = useState(false);
   const [afficherEnvoyer, setAfficherEnvoyer] = useState(false);
+  const [destinataireQR, setDestinataireQR] = useState<any>(null);
   const [screen, setScreen] = useState('accueil');
   const [succesVisible, setSuccesVisible] = useState(false); 
   const [ecranAuth, setEcranAuth] = useState<'connexion' | 'inscription' | 'creerPin' | null>('connexion');
@@ -2100,15 +2045,15 @@ setupNotifications();
   onSuccess={() => setPinOk(true)} 
   onRetourConnexion={() => setEcranAuth('connexion')} 
 />;
-  if (afficherEnvoyer) return <EcranEnvoyer onRetour={() => setAfficherEnvoyer(false)} />;
+if (afficherEnvoyer) return <EcranEnvoyer onRetour={() => { setAfficherEnvoyer(false); setDestinataireQR(null); }} destinataireInitial={destinataireQR} />;
 
-  return (
+return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar barStyle={t.isDark ? 'light-content' : 'dark-content'} backgroundColor={t.bg} />
 
       {screen === 'accueil'    && <EcranAccueil    isDark={t.isDark} onTransaction={() => setAfficherEnvoyer(true)} onNaviguer={setScreen} />}
       {screen === 'transferts' && <EcranTransferts isDark={t.isDark} onTransaction={() => setAfficherEnvoyer(true)} />}
-      {screen === 'payer'      && <EcranPayer      isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} />}
+     {screen === 'payer'      && <EcranPayer      isDark={t.isDark} onTransaction={() => setSuccesVisible(true)} onScannerQR={(data) => { setDestinataireQR(data); setAfficherEnvoyer(true); }} />}
       {screen === 'wallets'    && <EcranWallets    isDark={t.isDark} />}
       {screen === 'profil'     && <EcranProfil     isDark={t.isDark} onDeconnexion={async () => {
         await AsyncStorage.removeItem('token');
