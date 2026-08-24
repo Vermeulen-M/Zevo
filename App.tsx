@@ -16,11 +16,11 @@ import {
   ScrollView, useColorScheme, SafeAreaView, Animated,
   TextInput, Dimensions, Platform, Image,
 } from 'react-native';
-import Sound from 'react-native-sound';
+
 
 const { width: SW } = Dimensions.get('window');
 const logoZevo = require('./assets/logo.png');
-const logoZevoFull = require('./assests/logo2.png');
+const logoZevoFull = require('./assets/logo2.png');
 
 // ============================================
 // DESIGN SYSTEM
@@ -250,12 +250,6 @@ function AnimationSucces({ visible, onFin }: { visible: boolean, onFin: () => vo
   }, [visible]);
 
   if (!visible) return null;
-
-  // Jouer le son de validation
-Sound.setCategory('Playback');
-const sound = new Sound('notification_compat.mp3', Sound.MAIN_BUNDLE, (error) => {
-    if (!error) sound.play();
-});
 
   return (
     <Animated.View style={{
