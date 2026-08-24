@@ -16,9 +16,10 @@ import {
   ScrollView, useColorScheme, SafeAreaView, Animated,
   TextInput, Dimensions, Platform, Image,
 } from 'react-native';
+import Sound from 'react-native-sound';
 
 const { width: SW } = Dimensions.get('window');
-import Sound from 'react-native-sound';
+const logoZevo = require('./assets/logo.png');
 
 // ============================================
 // DESIGN SYSTEM
@@ -2030,14 +2031,15 @@ async function setupNotifications() {
 setupNotifications();
   }, []);
 
-  if (loading) {
+if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <LogoZevo size={40} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center' }}>
+        <Image source={logoZevo} style={{ width: 150, height: 150, resizeMode: 'contain' }} />
+        <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900', marginTop: 16, letterSpacing: -1 }}>Zevo</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginTop: 8 }}>Votre argent, partout en Afrique</Text>
       </SafeAreaView>
     );
   }
-
   if (ecranAuth === 'connexion') return <EcranConnexion onConnexion={() => setEcranAuth(null)} onInscription={() => setEcranAuth('inscription')} />;
   if (ecranAuth === 'inscription') return <EcranInscription onInscription={() => setEcranAuth('creerPin')} onConnexion={() => setEcranAuth('connexion')} />;
   if (ecranAuth === 'creerPin') return <EcranCreerPin onSuccess={() => setEcranAuth(null)} />;
