@@ -2029,9 +2029,8 @@ setupNotifications();
 if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={logoZevo} style={{ width: 150, height: 150, resizeMode: 'contain' }} />
-        <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900', marginTop: 16, letterSpacing: -1 }}>Zevo</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginTop: 8 }}>Votre argent, partout en Afrique</Text>
+        <Image source={logoZevoFull} style={{ width: 200, height: 75, resizeMode: 'contain' }} />
+        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginTop: 16 }}>Votre argent, partout en Afrique</Text>
       </SafeAreaView>
     );
   }
