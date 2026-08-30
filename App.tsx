@@ -89,29 +89,19 @@ function DecoBg() {
 // LOGO ZEVO — Z dans carré arrondi gradient
 // ============================================
 function LogoZevo({ size = 28 }: { size?: number }) {
-  const boxSize = size * 1.5;
   return (
-    <View style={{
-      width: boxSize, height: boxSize, borderRadius: boxSize * 0.28,
-      backgroundColor: C.p1,
-      alignItems: 'center', justifyContent: 'center',
-      shadowColor: C.p1,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
-      elevation: 6,
-    }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
+      <Image source={logoZevo} style={{ width: size * 1.2, height: size * 1.2, resizeMode: 'contain' }} />
       <Text style={{
         fontSize: size * 0.85,
-        fontWeight: '900',
-        color: '#FFFFFF',
-        transform: [{ skewX: '-12deg' }],
-        letterSpacing: -1,
-      }}>Z</Text>
+        fontWeight: '700',
+        color: C.p1,
+        letterSpacing: -0.5,
+        marginLeft: -10,
+      }}>evo</Text>
     </View>
   );
 }
-
 // ============================================
 // COMPOSANT CARTE — effet neumorphisme
 // ============================================
@@ -345,7 +335,7 @@ function EcranConnexion({ onConnexion, onInscription }: { onConnexion: () => voi
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
         <View style={{ alignItems: 'center', marginBottom: 36 }}>
-          <LogoZevo size={32} />
+          <LogoZevo size={48} />
           <Text style={{ fontSize: F.xxl, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>
             check et paies
           </Text>
@@ -407,7 +397,7 @@ function EcranInscription({ onInscription, onConnexion }: { onInscription: () =>
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
         <View style={{ alignItems: 'center', marginBottom: 32 }}>
-          <LogoZevo size={32} />
+          <LogoZevo size={48} />
           <Text style={{ fontSize: F.xs, color: t.sub, marginTop: 12, letterSpacing: 0.5 }}>CRÉER VOTRE COMPTE</Text>
         </View>
 
@@ -570,7 +560,7 @@ function EcranCreerPin({ onSuccess }: { onSuccess: () => void }) {
       <DecoBg />
 
       <View style={{ alignItems: 'center', marginBottom: 48 }}>
-        <LogoZevo size={32} />
+        <LogoZevo size={48} />
         <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20 }}>
           {etape === 'creer' ? 'Créer votre PIN' : 'Confirmer votre PIN'}
         </Text>
@@ -672,7 +662,7 @@ async function appuyer(c: string) {
       <View style={{ position: 'absolute', bottom: -80, left: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: t.isDark ? 'rgba(94,92,230,0.05)' : 'rgba(94,92,230,0.03)' }} />
 
       <View style={{ alignItems: 'center', marginBottom: 48 }}>
-        <LogoZevo size={32} />
+        <LogoZevo size={48} />
         <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20, letterSpacing: -0.3 }}>
           Entrez votre PIN
         </Text>
@@ -804,7 +794,7 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
           <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>{prenomNom}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+     <LogoZevo size={28} />
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center', shadowColor: C.p1, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}>
             <Text style={{ color: '#fff', fontWeight: '800', fontSize: F.sm }}>
               {user ? user.nom.charAt(0).toUpperCase() : 'Z'}
@@ -952,7 +942,7 @@ function EcranEnvoyer({ onRetour, destinataireInitial }: { onRetour: () => void,
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <DecoBg />
-        <LogoZevo size={32} />
+        <LogoZevo size={48} />
         <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 24, textAlign: 'center' }}>
           Confirmez le paiement
         </Text>
@@ -1194,7 +1184,7 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+      <LogoZevo size={28} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Transferts</Text>
       </View>
 
@@ -1337,7 +1327,7 @@ if (afficherScanner) {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+<LogoZevo size={28} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Payer</Text>
       </View>
 
@@ -1602,7 +1592,7 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
       <DecoBg />
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+       <LogoZevo size={28} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mes Wallets</Text>
       </View>
 
@@ -1737,7 +1727,7 @@ function EcranChangerPin({ onRetour, userId }: { onRetour: () => void, userId: n
       </TouchableOpacity>
 
       <View style={{ alignItems: 'center', marginBottom: 48 }}>
-        <LogoZevo size={32} />
+        <LogoZevo size={48} />
         <Text style={{ fontSize: F.xl, fontWeight: '700', color: t.text, marginTop: 20 }}>
           {etape === 'ancien' ? 'Entrez votre ancien PIN' : etape === 'nouveau' ? 'Nouveau PIN' : 'Confirmez le nouveau PIN'}
         </Text>
@@ -1896,7 +1886,7 @@ const options = [
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+      <LogoZevo size={28} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Profil</Text>
       </View>
 
@@ -2027,9 +2017,14 @@ setupNotifications();
 
 if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={logoZevo} style={{ width: 200, height: 75, resizeMode: 'contain' }} />
-        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginTop: 16 }}>Votre argent, partout en Afrique</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#050D1F', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(10,132,255,0.08)' }} />
+        <View style={{ position: 'absolute', bottom: -80, left: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(10,132,255,0.06)' }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image source={logoZevo} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
+          <Text style={{ fontSize: 48, fontWeight: '700', color: C.p1, letterSpacing: -1, marginLeft: -12 }}>evo</Text>
+        </View>
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: F.sm, marginTop: 16, letterSpacing: 1 }}>VOTRE ARGENT, PARTOUT EN AFRIQUE</Text>
       </SafeAreaView>
     );
   }
