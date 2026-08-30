@@ -19,8 +19,7 @@ import {
 
 
 const { width: SW } = Dimensions.get('window');
-const logoZevo = require('./assets/logo.png');
-const logoZevoFull = require('./assets/logo2.png');
+const logoZevo = require('./assets/logoZevo.png');
 
 // ============================================
 // DESIGN SYSTEM
@@ -805,7 +804,7 @@ function EcranAccueil({ isDark, onTransaction, onNaviguer }: { isDark: boolean, 
           <Text style={{ fontSize: F.xxl, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>{prenomNom}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Image source={logoZevoFull} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+          <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center', shadowColor: C.p1, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}>
             <Text style={{ color: '#fff', fontWeight: '800', fontSize: F.sm }}>
               {user ? user.nom.charAt(0).toUpperCase() : 'Z'}
@@ -1195,7 +1194,7 @@ function EcranTransferts({ isDark, onTransaction }: { isDark: boolean, onTransac
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevoFull} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Transferts</Text>
       </View>
 
@@ -1338,7 +1337,7 @@ if (afficherScanner) {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevoFull} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Payer</Text>
       </View>
 
@@ -1603,7 +1602,7 @@ function EcranWallets({ isDark }: { isDark: boolean }) {
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
       <DecoBg />
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevoFull} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Mes Wallets</Text>
       </View>
 
@@ -1897,7 +1896,7 @@ const options = [
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} showsVerticalScrollIndicator={false}>
       <DecoBg/>
       <View style={{ padding: 20, paddingTop: 28, borderBottomWidth: 0.5, borderBottomColor: t.border, gap: 6 }}>
-       <Image source={logoZevoFull} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
+       <Image source={logoZevo} style={{ width: 80, height: 30, resizeMode: 'contain' }} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: t.text, letterSpacing: -0.5 }}>Profil</Text>
       </View>
 
@@ -2009,7 +2008,7 @@ export default function App() {
       } catch (e) {
         console.log('AsyncStorage error:', e);
       } finally {
-        setLoading(false);
+       setTimeout(() => setLoading(false), 3000);
       }
     }
     check();
@@ -2029,7 +2028,7 @@ setupNotifications();
 if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.p1, alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={logoZevoFull} style={{ width: 200, height: 75, resizeMode: 'contain' }} />
+        <Image source={logoZevo} style={{ width: 200, height: 75, resizeMode: 'contain' }} />
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: F.sm, marginTop: 16 }}>Votre argent, partout en Afrique</Text>
       </SafeAreaView>
     );
